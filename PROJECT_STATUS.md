@@ -12,7 +12,7 @@ next. Update this file as pieces land.
 | `elm327.py` | AT init sequence, command/response framing, error detection, `ATDPN` protocol name lookup | done |
 | `pids.py` | Mode 01 PID table + decode math (RPM, speed, coolant temp, intake temp, MAF, throttle position, fuel level) | done |
 | `dtc.py` | Mode 03/04 DTC read/clear, SAE J2012 byte decode, generic P0xxx table (~40 codes) | done |
-| `vin.py` | Mode 09 VIN retrieval, WMI → manufacturer decode | done |
+| `vin.py` | Mode 09 VIN retrieval, WMI → manufacturer decode | done — `WMI_TABLE` has 353 entries across all 5 brands, sourced from NHTSA's public vPIC database |
 | `mock_adapter.py` | `MockELM327Adapter` — canned AT/PID/DTC/VIN responses (`default`, `no_adapter`, `malformed_vin` scenarios) for dev without hardware | done |
 
 ## Profiles (`cypher_dds.profiles`) — brand-specific
@@ -55,20 +55,21 @@ than padded with unverified/conflicting hex codes.
 
 ## Tests (`tests/`)
 
-43 tests, 0 skipped. `test_pids.py`, `test_elm327.py`, `test_serial_conn.py`,
+45 tests, 0 skipped. `test_pids.py`, `test_elm327.py`, `test_serial_conn.py`,
 `test_dtc.py`, and `test_vin.py` all exercise real logic against
 `MockELM327Adapter`: PID decode math, the full ELM327
 init/command/protocol-detection flow, DTC byte decoding (all four
-letter-prefix cases, padding, error paths), `DTCReader`, WMI decoding, and
-`request_vin` (including the malformed-VIN length-validation path).
-`test_profiles.py` locks in real GM, Ford, and Dodge/Chrysler P1xxx lookups
-plus the GM/Ford enhanced-PID entries as regression checks.
+letter-prefix cases, padding, error paths), `DTCReader`, WMI decoding
+(including non-US manufacturing plants and the Mercedes/DaimlerChrysler
+exclusion), and `request_vin` (including the malformed-VIN
+length-validation path). `test_profiles.py` locks in real GM, Ford, and
+Dodge/Chrysler P1xxx lookups plus the GM/Ford enhanced-PID entries as
+regression checks.
 
 ## Next steps (not yet started)
 
 1. Add Dodge/Chrysler enhanced PIDs and B/C/U-series codes for all three
    brands where documented; keep expanding GM/Ford enhanced PIDs as more
    are independently confirmed.
-2. Expand `WMI_TABLE` beyond the current seed entries.
-3. Wire up the Textual dashboard against `core` (or the mock adapter) —
+2. Wire up the Textual dashboard against `core` (or the mock adapter) —
    connect the demo status widgets to real serial/DTC/VIN state.

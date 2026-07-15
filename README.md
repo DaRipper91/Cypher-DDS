@@ -149,7 +149,7 @@ The Toyota/Lexus and Honda/Acura profiles are intentionally empty stubs today, i
 
 ## Roadmap
 
-Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: serial transport, ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode, Mode 09 VIN decode — the whole core layer — plus DTC tables for all three fleshed-out brands (GM 402, Ford 410, Dodge/Chrysler 97 P1xxx codes) and a small verified set of GM/Ford enhanced PIDs. Next: growing the enhanced-PID tables further, then wiring the Textual dashboard up to live data.
+Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: serial transport, ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode, Mode 09 VIN decode — the whole core layer — plus DTC tables for all three fleshed-out brands (GM 402, Ford 410, Dodge/Chrysler 97 P1xxx codes), a small verified set of GM/Ford enhanced PIDs, and a 353-entry `WMI_TABLE` covering all five brands' North American and major overseas manufacturing plants (sourced from NHTSA's public vPIC database). Next: growing the enhanced-PID tables further, then wiring the Textual dashboard up to live data.
 
 ## Safety
 
