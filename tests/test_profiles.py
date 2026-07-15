@@ -35,3 +35,10 @@ def test_gm_profile_resolves_known_manufacturer_codes():
     )
     assert gm.get_dtc_description("P0301") is None  # generic code, not GM's table
     assert gm.get_dtc_description("P9999") is None  # not a real code
+
+
+def test_ford_profile_resolves_known_manufacturer_codes():
+    ford = get_profile("ford")
+    assert ford.get_dtc_description("P1000") == "OBD System Readiness Test Not Complete"
+    assert ford.get_dtc_description("P0420") is None  # generic code, not Ford's table
+    assert ford.get_dtc_description("P9999") is None  # not a real code

@@ -63,7 +63,7 @@ Two layers, deliberately kept apart:
 | Brand | Years | Bus | Status |
 |---|---|---|---|
 | GM | 1996+ | J1850 VPW (1996–2007ish) → CAN (2008+) | 🚧 DTC table done (402 P1xxx codes); enhanced PIDs pending |
-| Ford | 1996+ | J1850 PWM (1996–2007ish) → CAN (2008+) | 🚧 in progress — see note below |
+| Ford | 1996+ | J1850 PWM (1996–2007ish) → CAN (2008+) | 🚧 DTC table done (410 P1xxx codes, incl. Power Stroke diesel); enhanced PIDs pending — see note below |
 | Dodge / Chrysler | 1996+ | ISO 9141-2 / ISO 14230-4 KWP (1996–2007ish) → CAN (2008+) | 🚧 in progress — see note below |
 | Toyota / Lexus | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🌱 stub (proves the plugin interface) |
 | Honda / Acura | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🌱 stub (proves the plugin interface) |
@@ -149,7 +149,7 @@ The Toyota/Lexus and Honda/Acura profiles are intentionally empty stubs today, i
 
 ## Roadmap
 
-Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: serial transport, ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode, Mode 09 VIN decode — the whole core layer — plus GM's DTC table (402 P1xxx codes from public reference documentation). Next: Ford/Dodge DTC tables, GM/Ford/Dodge enhanced-PID tables, then wiring the Textual dashboard up to live data.
+Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: serial transport, ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode, Mode 09 VIN decode — the whole core layer — plus GM's and Ford's DTC tables (402 and 410 P1xxx codes respectively, from public reference documentation). Next: Dodge/Chrysler's DTC table, GM/Ford/Dodge enhanced-PID tables, then wiring the Textual dashboard up to live data.
 
 ## Safety
 
