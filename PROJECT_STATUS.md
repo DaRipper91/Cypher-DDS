@@ -10,7 +10,7 @@ protocol logic is not yet implemented. Update this file as pieces land.
 | `serial_conn.py` | Port discovery (`/dev/ttyUSB*`/`/dev/ttyACM*`), connect/disconnect, byte-level read-until-prompt framing | done |
 | `elm327.py` | AT init sequence, command/response framing, error detection, `ATDPN` protocol name lookup | done |
 | `pids.py` | Mode 01 PID table + decode math (RPM, speed, coolant temp, intake temp, MAF, throttle position, fuel level) | done |
-| `dtc.py` | Mode 03/04 DTC read/clear, generic P0xxx decoding | stub |
+| `dtc.py` | Mode 03/04 DTC read/clear, SAE J2012 byte decode, generic P0xxx table (~40 codes) | done |
 | `vin.py` | Mode 09 VIN retrieval + WMI → manufacturer decode | stub |
 | `mock_adapter.py` | `MockELM327Adapter` — canned AT/PID responses (`default` + `no_adapter` scenarios) for dev without hardware | done |
 
@@ -38,16 +38,16 @@ pre-2008 or non-CAN (ISO9141, KWP2000, J1850).
 
 ## Tests (`tests/`)
 
-`test_pids.py`, `test_elm327.py`, and `test_serial_conn.py` exercise real
-logic now — PID decode math, the full ELM327 init/command/protocol-detection
-flow against `MockELM327Adapter`, and the serial connection contract. DTC and
-VIN modules are still scaffolded pending their corresponding core module.
+`test_pids.py`, `test_elm327.py`, `test_serial_conn.py`, and `test_dtc.py`
+exercise real logic now — PID decode math, the full ELM327
+init/command/protocol-detection flow, DTC byte decoding (all four
+letter-prefix cases, padding, error paths), and `DTCReader` against
+`MockELM327Adapter`. VIN is still scaffolded pending `vin.py`.
 
 ## Next steps (not yet started)
 
-1. Implement Mode 03/04 DTC handling + generic P0xxx table.
-2. Implement Mode 09 VIN retrieval/decoding + WMI table for the five target
+1. Implement Mode 09 VIN retrieval/decoding + WMI table for the five target
    brands.
-3. Flesh out GM/Ford/Dodge profiles with real DTC and enhanced-PID tables
+2. Flesh out GM/Ford/Dodge profiles with real DTC and enhanced-PID tables
    where public documentation supports it.
-4. Wire up the Textual dashboard against `core` (or the mock adapter).
+3. Wire up the Textual dashboard against `core` (or the mock adapter).

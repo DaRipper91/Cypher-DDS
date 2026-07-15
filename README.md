@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](#license)
-[![Status](https://img.shields.io/badge/status-early%20scaffolding-orange)](PROJECT_STATUS.md)
+[![Status](https://img.shields.io/badge/status-core%20layer%20implemented-yellow)](PROJECT_STATUS.md)
 
 Live PID data. Diagnostic trouble codes. VIN decoding. No cloud, no app store, no subscription — just your laptop, a cable, and the OBD2 port under your dash.
 
@@ -143,7 +143,7 @@ The Toyota/Lexus and Honda/Acura profiles are intentionally empty stubs today, i
 
 ## Roadmap
 
-Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). At a glance: serial transport and ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode, Mode 09 VIN decode, then filling in GM/Ford/Dodge DTC and enhanced-PID tables, then wiring the Textual dashboard up to live data.
+Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: serial transport, ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode. Next: Mode 09 VIN decode, then filling in GM/Ford/Dodge DTC and enhanced-PID tables, then wiring the Textual dashboard up to live data.
 
 ## Safety
 

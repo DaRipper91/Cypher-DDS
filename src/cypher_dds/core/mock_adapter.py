@@ -24,6 +24,8 @@ _SCENARIOS: dict[str, dict[str, str]] = {
         "0105": "41 05 7B",  # coolant temp = 83 C
         "0D": "41 0D 5A",  # speed = 90 km/h (mode 01 without leading '01' too)
         "010D": "41 0D 5A",
+        "03": "43 03 01 01 04",  # two stored DTCs: P0301, P0104
+        "04": "44",  # clear DTCs: positive response, no data
     },
     "no_adapter": {},  # every command times out — simulates nothing connected
 }
