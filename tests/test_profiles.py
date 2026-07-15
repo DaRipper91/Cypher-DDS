@@ -1,9 +1,11 @@
 """Tests that the profile plugin architecture is actually brand-agnostic.
 
-The Toyota/Lexus and Honda/Acura stubs exist specifically to prove new
-brands slot in via the same interface with zero core changes — these tests
-check that registration and lookup work uniformly across full and stub
-profiles alike.
+All five v1 profiles now carry real DTC data (Toyota/Lexus and Honda/Acura
+were originally empty stubs specifically to prove new brands slot in via
+the same interface with zero core changes — that architectural point still
+holds, it's just that all five profiles are "full" now). Enhanced PIDs
+remain a stub for Dodge/Chrysler/Toyota/Lexus/Honda/Acura; only GM and Ford
+have any so far.
 """
 
 from cypher_dds.profiles import base  # noqa: F401 (triggers registration)
@@ -16,7 +18,7 @@ def test_all_five_v1_profiles_are_registered():
     assert EXPECTED_KEYS.issubset(all_profiles().keys())
 
 
-def test_stub_profiles_follow_same_interface_as_full_profiles():
+def test_all_profiles_follow_the_same_interface():
     for key in EXPECTED_KEYS:
         profile = get_profile(key)
         assert profile is not None
@@ -49,6 +51,20 @@ def test_dodge_chrysler_profile_resolves_known_manufacturer_codes():
     assert mopar.get_dtc_description("P1494") == "Leak Detection Pump Switch or Mechanical Fault"
     assert mopar.get_dtc_description("P0301") is None  # generic code, not Chrysler's table
     assert mopar.get_dtc_description("P9999") is None  # not a real code
+
+
+def test_toyota_lexus_profile_resolves_known_manufacturer_codes():
+    toyota = get_profile("toyota_lexus")
+    assert toyota.get_dtc_description("P1120") == "Accelerator Pedal Position Sensor Circuit"
+    assert toyota.get_dtc_description("P0420") is None  # generic code, not Toyota's table
+    assert toyota.get_dtc_description("P9999") is None  # not a real code
+
+
+def test_honda_acura_profile_resolves_known_manufacturer_codes():
+    honda = get_profile("honda_acura")
+    assert honda.get_dtc_description("P1201") == "Cylinder 1 Misfire"
+    assert honda.get_dtc_description("P0300") is None  # generic code, not Honda's table
+    assert honda.get_dtc_description("P9999") is None  # not a real code
 
 
 def test_gm_and_ford_enhanced_pids_are_populated():
