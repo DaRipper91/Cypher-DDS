@@ -16,7 +16,7 @@ from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profi
 # can vary slightly by model year/family since GM has reused some code
 # numbers for different faults across platforms (noted with "/" where the
 # source material showed more than one definition for the same code).
-# TODO: expand with B/C/U-series GM codes and enhanced (Mode 22) PIDs.
+# TODO: expand with B/C/U-series GM codes.
 DTC_TABLE: dict[str, str] = {
     # Oxygen sensors / HO2S
     "P1031": "HO2S Heater Current Monitor Control Circuit Banks 1 and 2 Sensor 1",
@@ -437,8 +437,18 @@ DTC_TABLE: dict[str, str] = {
     "P1895": "TCM to ECM Torque Reduction Circuit",
 }
 
+# Enhanced (Mode 22) PIDs. Unlike DTCs, Mode 22 assignments are never
+# published by manufacturers in a consolidated form — SAE J2190 defines the
+# mechanism, not the PID map — so this list is necessarily thin, built from
+# cross-referenced aftermarket-scanner community documentation rather than
+# a single source. Expand as more entries are independently confirmed.
 ENHANCED_PIDS: tuple[EnhancedPID, ...] = (
-    # EnhancedPID(pid="221E37", name="TRANS_FLUID_TEMP", description="Transmission fluid temperature", unit="°C"),
+    EnhancedPID(
+        pid="221940",
+        name="TRANS_FLUID_TEMP",
+        description="Transmission fluid temperature; 1 byte, formula A-40",
+        unit="°C",
+    ),
 )
 
 

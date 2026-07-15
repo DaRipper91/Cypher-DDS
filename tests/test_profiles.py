@@ -42,3 +42,19 @@ def test_ford_profile_resolves_known_manufacturer_codes():
     assert ford.get_dtc_description("P1000") == "OBD System Readiness Test Not Complete"
     assert ford.get_dtc_description("P0420") is None  # generic code, not Ford's table
     assert ford.get_dtc_description("P9999") is None  # not a real code
+
+
+def test_dodge_chrysler_profile_resolves_known_manufacturer_codes():
+    mopar = get_profile("dodge_chrysler")
+    assert mopar.get_dtc_description("P1494") == "Leak Detection Pump Switch or Mechanical Fault"
+    assert mopar.get_dtc_description("P0301") is None  # generic code, not Chrysler's table
+    assert mopar.get_dtc_description("P9999") is None  # not a real code
+
+
+def test_gm_and_ford_enhanced_pids_are_populated():
+    gm_pids = {p.name: p for p in get_profile("gm").enhanced_pids()}
+    assert gm_pids["TRANS_FLUID_TEMP"].pid == "221940"
+
+    ford_pids = {p.name: p for p in get_profile("ford").enhanced_pids()}
+    assert ford_pids["TRANS_FLUID_TEMP"].pid == "221E1C"
+    assert ford_pids["ENGINE_OIL_TEMP"].pid == "221310"

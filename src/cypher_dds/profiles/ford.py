@@ -23,7 +23,7 @@ from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profi
 # Power Stroke diesel codes, which show up on the same P1xxx range as gas
 # engines). Only standard-bus-reachable codes belong here — see module
 # docstring re: MS-CAN.
-# TODO: expand with B/C/U-series Ford codes and enhanced (Mode 22) PIDs.
+# TODO: expand with B/C/U-series Ford codes.
 DTC_TABLE: dict[str, str] = {
     # General / OBD readiness
     "P1000": "OBD System Readiness Test Not Complete",
@@ -454,8 +454,26 @@ DTC_TABLE: dict[str, str] = {
     "P1891": "Transmission Transfer Case Contact Plate Ground Return Open Circuit",
 }
 
+# Enhanced (Mode 22) PIDs. Unlike DTCs, Mode 22 assignments are never
+# published by manufacturers in a consolidated form — SAE J2190 defines the
+# mechanism, not the PID map — so this list is necessarily thin, built from
+# cross-referenced aftermarket-scanner community documentation rather than
+# a single source. Only PIDs confirmed reachable on the standard OBD2 bus
+# belong here (see MS-CAN note above). Expand as more entries are
+# independently confirmed.
 ENHANCED_PIDS: tuple[EnhancedPID, ...] = (
-    # Only PIDs confirmed reachable on the standard OBD2 CAN bus belong here.
+    EnhancedPID(
+        pid="221E1C",
+        name="TRANS_FLUID_TEMP",
+        description="Transmission fluid temperature; 2 bytes, formula ((A*256)+B)*(9/80)+32",
+        unit="°F",
+    ),
+    EnhancedPID(
+        pid="221310",
+        name="ENGINE_OIL_TEMP",
+        description="Engine oil temperature (7.3L Power Stroke); 2 bytes, formula ((A*256)+B)/100-40",
+        unit="°C",
+    ),
 )
 
 
