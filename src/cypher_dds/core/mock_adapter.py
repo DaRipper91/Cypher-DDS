@@ -31,8 +31,15 @@ _SCENARIOS: dict[str, dict[str, str]] = {
     },
     "no_adapter": {},  # every command times out — simulates nothing connected
     "malformed_vin": {
-        # A truncated VIN response ("1G1" only) to exercise request_vin's
-        # length-validation path.
+        # Init succeeds normally; only the VIN response is truncated ("1G1"
+        # only), to exercise request_vin's length-validation path without
+        # also failing connect() itself.
+        "ATZ": "ELM327 v1.5",
+        "ATE0": "OK",
+        "ATL0": "OK",
+        "ATH0": "OK",
+        "ATSP0": "OK",
+        "ATDPN": "A6",
         "0902": "49 02 01 31 47 31",
     },
 }

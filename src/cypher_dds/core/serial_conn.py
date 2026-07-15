@@ -68,6 +68,24 @@ class SerialConnection:
             port=port, baudrate=baudrate, timeout=DEFAULT_TIMEOUT
         )
 
+    def connect_bluetooth(self, address: str, channel: int | None = None) -> None:
+        """Connect to a paired Bluetooth ELM327 adapter over RFCOMM.
+
+        `address` is the adapter's MAC (already paired via the OS's
+        Bluetooth settings — this doesn't do pairing or device discovery).
+        Linux-only; see bluetooth_adapter.py for why.
+        """
+        from cypher_dds.core.bluetooth_adapter import (
+            DEFAULT_RFCOMM_CHANNEL,
+            BluetoothSerialAdapter,
+        )
+
+        self._transport = BluetoothSerialAdapter(
+            address,
+            channel if channel is not None else DEFAULT_RFCOMM_CHANNEL,
+            timeout=DEFAULT_TIMEOUT,
+        )
+
     def disconnect(self) -> None:
         if self._transport is not None:
             self._transport.close()

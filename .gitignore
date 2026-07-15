@@ -8,3 +8,11 @@ dist/
 .pytest_cache/
 .ruff_cache/
 .coverage
+
+# Buildozer (Android) and PyInstaller (Windows/desktop) build output —
+# both cypher-dds.spec and buildozer.spec themselves ARE committed config,
+# just not what these tools generate from them.
+.buildozer/
+bin/
+*.apk
+*.exe

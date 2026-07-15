@@ -19,6 +19,12 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.5",
 ]
+build = [
+    "pyinstaller>=6.0",
+]
+mobile = [
+    "kivy>=2.3",
+]
 
 [project.scripts]
 cypher-dds = "cypher_dds.tui.app:main"

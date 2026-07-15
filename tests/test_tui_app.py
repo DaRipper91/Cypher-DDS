@@ -10,7 +10,7 @@ dependency: each test wraps its async body in asyncio.run().
 import asyncio
 
 from cypher_dds.tui.app import ConnectionStatusWidget, CypherDDSApp, DTCPanelWidget
-from cypher_dds.tui.theme import ROYAL_BLUE
+from cypher_dds.theme import ROYAL_BLUE
 
 
 def test_connects_and_wires_up_real_core_state():

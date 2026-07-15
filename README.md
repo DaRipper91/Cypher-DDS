@@ -2,7 +2,7 @@
 
 # Cypher-DDS
 
-**A terminal-first diagnostic tool for talking to your car over a USB ELM327 adapter.**
+**A terminal-first diagnostic tool for talking to your car over a USB or Bluetooth ELM327 adapter.**
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](#license)
@@ -16,14 +16,14 @@ Live PID data. Diagnostic trouble codes. VIN decoding. No cloud, no app store, n
 
 ## What it does
 
-Plug a USB ELM327 (or ELM327-clone / STN11xx) adapter into your car's OBD2 port and into your machine, and Cypher-DDS will:
+Plug a USB ELM327 (or ELM327-clone / STN11xx) adapter into your car's OBD2 port — or pair one over Bluetooth on Linux — and Cypher-DDS will:
 
-- Auto-detect and connect over serial, initialize the ELM327 chip, and auto-detect the vehicle's protocol
-- Stream **live data** — RPM, speed, coolant temp, throttle position, and more — into a live-updating terminal dashboard
-- Read and clear **diagnostic trouble codes (DTCs)**, with brand-aware descriptions where available
+- Connect over serial (USB or Bluetooth RFCOMM), initialize the ELM327 chip, and auto-detect the vehicle's protocol
+- Stream **live data** — RPM, speed, coolant temp, throttle position, and more
+- Read **diagnostic trouble codes (DTCs)**, with brand-aware descriptions where available
 - Pull and decode the **VIN**, using it to auto-select the right vehicle profile
 
-It works on any standard CAN-bus OBD2 vehicle out of the box, and gets smarter about specific brands through a plugin system — see [Architecture](#architecture) below.
+It works on any standard OBD2 vehicle (1996+, any protocol — J1850, ISO 9141-2, KWP2000, or CAN) out of the box, and gets smarter about specific brands through a plugin system — see [Architecture](#architecture) below. The terminal UI is the primary, most-tested interface; an Android app exists as an early demo (mock-adapter only for now — see [Other platforms](#other-platforms)).
 
 ## Why
 
@@ -31,19 +31,22 @@ Every OBD2 app on the market either wants a subscription, phones data home, or h
 
 ## Architecture
 
-Two layers, deliberately kept apart:
+Four layers, deliberately kept apart:
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│  cypher_dds.tui                                             │
-│  Textual dashboard — connection status, live PIDs, DTC panel│
-└───────────────────────────┬───────────────────────────────-┘
-                             │  talks only to public interfaces
-┌───────────────────────────▼──────────────────────────────-─┐
-│  cypher_dds.core            (brand-agnostic)                │
-│  serial transport → ELM327 AT layer → Mode 01/03/04/09      │
-│  Works on any CAN-bus OBD2 vehicle with zero brand code.     │
-└───────────────────────────┬──────────────────────────────-─┘
+┌──────────────────────────────┐  ┌──────────────────────────────┐
+│  cypher_dds.tui               │  │  cypher_dds.mobile            │
+│  Textual dashboard (desktop)  │  │  Kivy app (Android)           │
+└───────────────┬──────────────┘  └───────────────┬──────────────┘
+                 │        both drive the same session layer        │
+                 └───────────────────────┬──────────────────────---┘
+                             ┌───────────▼────────────┐
+                             │  cypher_dds.session      │
+                             │  connect → VIN/profile → │
+                             │  DTC-read → live-PID-read│
+                             │  Framework-agnostic — no │
+                             │  UI code of its own.      │
+                             └───────────┬────────────-─┘
                              │  optionally consulted for
                              │  DTC descriptions / enhanced PIDs
 ┌───────────────────────────▼──────────────────────────────-─┐
@@ -51,10 +54,17 @@ Two layers, deliberately kept apart:
 │  GM · Ford · Dodge/Chrysler · Toyota/Lexus · Honda/Acura     │
 │  Each is a self-contained module. New brand = new module,    │
 │  zero changes to core.                                       │
+└───────────────────────────┬──────────────────────────────-─┘
+                             │  talks only to public interfaces
+┌───────────────────────────▼──────────────────────────────-─┐
+│  cypher_dds.core            (brand-agnostic)                │
+│  USB/Bluetooth serial transport → ELM327 AT layer →          │
+│  Mode 01/03/04/09. Works on any OBD2 vehicle, any protocol,  │
+│  with zero brand code.                                        │
 └───────────────────────────────────────────────────────────-┘
 ```
 
-**Core never imports from profiles or the TUI.** A profile can be selected manually or picked automatically from the decoded VIN's WMI. The TUI only talks to core's public interfaces, so a GUI could sit next to it later without touching any protocol logic.
+**Core never imports from profiles or a presentation layer.** A profile can be selected manually or picked automatically from the decoded VIN's WMI. Both the TUI and the mobile app talk only to `cypher_dds.session`'s public interface — neither re-implements connect/VIN/DTC/PID logic, and a future desktop GUI would slot in the exact same way, no protocol logic duplicated a third time.
 
 ## Supported vehicles
 
@@ -65,8 +75,8 @@ Two layers, deliberately kept apart:
 | GM | 1996+ | J1850 VPW (1996–2007ish) → CAN (2008+) | 🚧 DTC table done (402 P1xxx codes) + 1 enhanced PID |
 | Ford | 1996+ | J1850 PWM (1996–2007ish) → CAN (2008+) | 🚧 DTC table done (410 P1xxx codes, incl. Power Stroke diesel) + 2 enhanced PIDs — see note below |
 | Dodge / Chrysler | 1996+ | ISO 9141-2 / ISO 14230-4 KWP (1996–2007ish) → CAN (2008+) | 🚧 DTC table done (97 P1xxx codes, incl. diesel/CNG); enhanced PIDs pending — see note below |
-| Toyota / Lexus | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🌱 stub (proves the plugin interface) |
-| Honda / Acura | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🌱 stub (proves the plugin interface) |
+| Toyota / Lexus | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🚧 DTC table done (44 P1xxx codes); enhanced PIDs pending |
+| Honda / Acura | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🚧 DTC table done (94 P1xxx codes); enhanced PIDs pending |
 
 Cypher-DDS never hardcodes a protocol — the ELM327's `ATSP0` auto-detect handles J1850 PWM/VPW, ISO 9141-2, ISO 14230-4 KWP2000, and CAN transparently, and Mode 01/03/09 decoding is identical at the application layer regardless of which one a vehicle actually uses. Widening coverage from 2008+ to 1996+ was a documentation/scope change, not a core code change.
 
@@ -119,17 +129,39 @@ Point the TUI at one directly:
 cypher-dds --port /dev/ttyUSB0
 ```
 
+Or connect over Bluetooth (Linux only — pair the adapter via your OS's Bluetooth settings first, this doesn't do pairing itself):
+
+```bash
+cypher-dds --bluetooth AA:BB:CC:DD:EE:FF
+```
+
+## Other platforms
+
+Cypher-DDS is developed and tested as a Linux terminal app first. Two other build targets exist, both produced by GitHub Actions rather than locally (PyInstaller has to run on the target OS, and Buildozer needs a full Android SDK/NDK toolchain — neither is available in this project's dev environment):
+
+- **Windows `.exe`** — [`.github/workflows/build-windows.yml`](.github/workflows/build-windows.yml) packages the exact same Textual TUI with PyInstaller on a `windows-latest` runner. No separate Windows codebase; it's the identical app.
+- **Android `.apk`** — [`.github/workflows/build-android.yml`](.github/workflows/build-android.yml) packages `cypher_dds.mobile`, a separate minimal Kivy app (Textual can't run inside an Android app the way it can in a real terminal), via Buildozer. **This is an early demo, not a finished mobile app**: it's only ever been verified by CI successfully *packaging* it, never run on a real device or emulator, and it has no working Bluetooth backend yet (Android needs a `pyjnius`-based backend that isn't written — see `PROJECT_STATUS.md`), which matters a lot since Bluetooth is realistically the only way a phone talks to a car's OBD2 port.
+
+Both artifacts are uploaded as workflow run artifacts on every push to `main`; grab them from the [Actions tab](../../actions).
+
 ## Project layout
 
 ```
 Cypher-DDS/
 ├── pyproject.toml
 ├── PROJECT_STATUS.md        # what's implemented vs. stubbed, updated as work lands
+├── main.py                  # Buildozer/Android entry point (delegates to src/)
+├── buildozer.spec           # Android (Kivy) packaging config
+├── cypher-dds.spec          # PyInstaller (Windows/desktop) packaging config
+├── .github/workflows/       # CI: build-windows.yml, build-android.yml
 ├── src/cypher_dds/
-│   ├── core/                # brand-agnostic: serial, ELM327, PIDs, DTCs, VIN
+│   ├── core/                # brand-agnostic: serial (USB + Bluetooth), ELM327, PIDs, DTCs, VIN
+│   ├── session.py           # framework-agnostic orchestration both UIs drive
+│   ├── theme.py             # shared brand accent colors (Royal Blue / Cherry Red)
 │   ├── profiles/            # brand plugins: GM, Ford, Dodge/Chrysler, Toyota/Lexus, Honda/Acura
-│   └── tui/                 # Textual dashboard
-└── tests/                   # decode-logic tests — no hardware needed
+│   ├── tui/                 # Textual dashboard (desktop)
+│   └── mobile/               # Kivy app (Android)
+└── tests/                   # decode-logic + session + UI tests — no hardware needed
 ```
 
 ## Adding a new brand
@@ -153,11 +185,11 @@ class MyBrandProfile(VehicleProfile):
 register_profile(MyBrandProfile())
 ```
 
-The Toyota/Lexus and Honda/Acura profiles are intentionally empty stubs today, included specifically to prove this interface holds up before their tables get filled in.
+Toyota/Lexus and Honda/Acura started as intentionally empty stubs, included specifically to prove this interface holds up before their tables got filled in — all five brands now carry real DTC data, validating that the plugin architecture scales without any core changes.
 
 ## Roadmap
 
-Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: the whole core layer (serial transport, ELM327 command framing, Mode 01/03/04/09 decode), DTC tables for all three fleshed-out brands (GM 402, Ford 410, Dodge/Chrysler 97 P1xxx codes), a small verified set of GM/Ford enhanced PIDs, a 353-entry `WMI_TABLE` from NHTSA's public vPIC database, and the Textual dashboard wired end to end to that real core state. Next: growing the enhanced-PID tables further, a continuous live-data polling loop, and Toyota/Honda's DTC tables.
+Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md), including a full planned-features backlog for both UIs. Done: the whole core layer (USB + Bluetooth serial transport, ELM327 command framing, Mode 01/03/04/09 decode), DTC tables for all five brands (GM 402, Ford 410, Dodge/Chrysler 97, Toyota/Lexus 44, Honda/Acura 94 P1xxx codes), a small verified set of GM/Ford enhanced PIDs, a 353-entry `WMI_TABLE` from NHTSA's public vPIC database, the Textual dashboard wired end to end to real core state via the new `cypher_dds.session` layer, and CI-built Windows/Android packages. Next: a real Android Bluetooth backend, installing both packaged artifacts on actual hardware to verify them beyond CI, and enhanced PIDs/B/C/U codes across all five brands.
 
 ## Safety
 
