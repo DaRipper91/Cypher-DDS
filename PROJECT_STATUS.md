@@ -33,7 +33,8 @@ pre-2008 or non-CAN (ISO9141, KWP2000, J1850).
 
 | Module | Purpose | Status |
 |---|---|---|
-| `app.py` | Textual app: connection status, live PID readout, DTC panel | stub |
+| `theme.py` | Brand accent colors (Royal Blue = connected/live + focus, Cherry Red = DTC alert), reserved for status meaning only | done |
+| `app.py` | Textual app: connection status badge + DTC alert badge are real (styled, keyboard-toggleable via demo bindings `c`/`x`); live PID readout, real serial/DTC wiring | stub |
 
 ## Tests (`tests/`)
 
