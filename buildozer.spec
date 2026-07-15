@@ -1,10 +1,11 @@
 [app]
 
 # Buildozer config for the Cypher-DDS Android app.
-# Built by .github/workflows/build-android.yml via ArtemSBulgakov/buildozer-action
-# on a GitHub Actions ubuntu-latest runner — there's no Android SDK/NDK in
-# this repo's dev environment, so that CI run is the real build step.
-# See src/cypher_dds/mobile/app.py's module docstring for what's NOT yet
+# Built by .github/workflows/build-android.yml, which runs the official
+# ghcr.io/kivy/buildozer Docker image directly on a GitHub Actions
+# ubuntu-latest runner — there's no Android SDK/NDK in this repo's dev
+# environment, so that CI run is the real build step. See
+# src/cypher_dds/mobile/app.py's module docstring for what's NOT yet
 # verified (never run on a physical device/emulator; no Android Bluetooth
 # backend).
 
@@ -30,7 +31,11 @@ fullscreen = 0
 android.permissions = BLUETOOTH,BLUETOOTH_ADMIN,BLUETOOTH_CONNECT,BLUETOOTH_SCAN
 
 android.api = 34
-android.minapi = 23
+# 24 (not 23) because python-for-android's CPython 3.14 recipe calls
+# preadv/pwritev (Python/remote_debugging.c), which Android's bionic libc
+# doesn't expose before API 24 — confirmed via a real CI build failure
+# (clang: "call to undeclared function 'preadv'") at minapi 23.
+android.minapi = 24
 android.archs = arm64-v8a
 
 [buildozer]
