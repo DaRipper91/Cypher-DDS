@@ -1,11 +1,18 @@
 name: Build Android APK
 
-# Runs on ubuntu-latest via ArtemSBulgakov/buildozer-action, which drives
-# the official Buildozer Docker image (Android SDK/NDK/python-for-android
-# toolchain included). There's no Android build toolchain in this repo's
-# dev environment, so this CI run is the real build *and* verification
-# step for the APK — see src/cypher_dds/mobile/app.py for what a green
-# build here does and doesn't prove.
+# Runs on ubuntu-latest by driving the official kivy/buildozer Docker image
+# directly (Android SDK/NDK/python-for-android toolchain included). There's
+# no Android build toolchain in this repo's dev environment, so this CI run
+# is the real build *and* verification step for the APK — see
+# src/cypher_dds/mobile/app.py for what a green build here does and
+# doesn't prove.
+#
+# NOTE: this intentionally does NOT use the ArtemSBulgakov/buildozer-action
+# GitHub Action — that action layers its own extra apt packages onto the
+# kivy/buildozer image via a custom Dockerfile, which broke when Ubuntu
+# "resolute" outran the openjdk-r PPA's package support. Running the
+# upstream kivy/buildozer image directly (per Kivy's own README) sidesteps
+# that action's Dockerfile entirely.
 
 on:
   push:
@@ -19,15 +26,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: buildozer android debug
-          buildozer_version: stable
+      - name: Build with Buildozer (official kivy/buildozer image)
+        run: |
+          docker run --rm \
+            --volume "$PWD":/home/user/hostcwd \
+            ghcr.io/kivy/buildozer android debug
+
+      - name: Locate built APK
+        id: find_apk
+        run: |
+          apk_path=$(find bin -name "*.apk" | head -n 1)
+          echo "Found APK: $apk_path"
+          echo "path=$apk_path" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cypher-dds-android
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: ${{ steps.find_apk.outputs.path }}
