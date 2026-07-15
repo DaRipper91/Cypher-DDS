@@ -28,7 +28,7 @@ jobs:
 
       - name: Build with Buildozer (official kivy/buildozer image)
         run: |
-          docker run --rm \
+          yes | docker run --rm --interactive \
             --volume "$PWD":/home/user/hostcwd \
             ghcr.io/kivy/buildozer android debug
 
