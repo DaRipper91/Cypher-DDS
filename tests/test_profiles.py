@@ -26,3 +26,12 @@ def test_stub_profiles_follow_same_interface_as_full_profiles():
 
 def test_unknown_profile_key_returns_none():
     assert get_profile("bmw") is None
+
+
+def test_gm_profile_resolves_known_manufacturer_codes():
+    gm = get_profile("gm")
+    assert gm.get_dtc_description("P1031") == (
+        "HO2S Heater Current Monitor Control Circuit Banks 1 and 2 Sensor 1"
+    )
+    assert gm.get_dtc_description("P0301") is None  # generic code, not GM's table
+    assert gm.get_dtc_description("P9999") is None  # not a real code
