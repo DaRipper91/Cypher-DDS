@@ -143,7 +143,7 @@ The Toyota/Lexus and Honda/Acura profiles are intentionally empty stubs today, i
 
 ## Roadmap
 
-Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: serial transport, ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode. Next: Mode 09 VIN decode, then filling in GM/Ford/Dodge DTC and enhanced-PID tables, then wiring the Textual dashboard up to live data.
+Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: serial transport, ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode, Mode 09 VIN decode — the whole core layer. Next: filling in GM/Ford/Dodge DTC and enhanced-PID tables, then wiring the Textual dashboard up to live data.
 
 ## Safety
 
