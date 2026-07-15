@@ -22,17 +22,34 @@ class VINInfo:
 # World Manufacturer Identifier prefixes for the v1 target brands.
 # TODO: this is a non-exhaustive seed; each brand has multiple WMIs across
 # plants/regions and this needs to be filled in against a real WMI reference.
+#
+# NOTE: this must be kept in sync with each profile's `wmi_codes` in
+# cypher_dds.profiles (gm.py, ford.py, dodge_chrysler.py, toyota_lexus.py,
+# honda_acura.py). Core can't import profiles (see cypher_dds.core's
+# package docstring), so this table is necessarily a separate copy, not a
+# derived one — adding a WMI to a profile does nothing here unless it's
+# added here too.
 WMI_TABLE: dict[str, str] = {
     "1G1": "gm",
     "1GC": "gm",
+    "1GT": "gm",
+    "3GN": "gm",
     "1FA": "ford",
     "1FT": "ford",
+    "1FM": "ford",
+    "3FA": "ford",
     "1C3": "dodge_chrysler",
     "1C4": "dodge_chrysler",
+    "1C6": "dodge_chrysler",
+    "2C3": "dodge_chrysler",
     "4T1": "toyota_lexus",
+    "4T3": "toyota_lexus",
     "JTD": "toyota_lexus",
+    "JTH": "toyota_lexus",
     "1HG": "honda_acura",
     "19U": "honda_acura",
+    "JHM": "honda_acura",
+    "2HG": "honda_acura",
 }
 
 
@@ -60,7 +77,11 @@ def request_vin(elm327: ELM327) -> VINInfo:
         tokens = tokens[1:]
 
     raw = bytes(int(token, 16) for token in tokens)
-    raw = raw.lstrip(b"\x00")  # some vehicles left-pad the VIN with nulls
+    # Some vehicles left-pad the VIN with nulls; CAN vehicles commonly
+    # right-pad it too (the last ISO-TP frame is zero-filled out to the
+    # frame size). str.strip() won't remove embedded NUL characters, so
+    # this has to happen on the raw bytes before decoding.
+    raw = raw.strip(b"\x00")
     vin = raw.decode("ascii", errors="replace").strip()
 
     if len(vin) != 17:

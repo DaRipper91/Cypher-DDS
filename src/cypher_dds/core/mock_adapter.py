@@ -35,6 +35,14 @@ _SCENARIOS: dict[str, dict[str, str]] = {
         # length-validation path.
         "0902": "49 02 01 31 47 31",
     },
+    "padded_vin": {
+        # Same VIN as "default", but with trailing 0x00 padding bytes, as
+        # real CAN vehicles commonly send (the last ISO-TP frame is
+        # zero-filled out to the frame size).
+        "0902": (
+            "49 02 01 31 47 31 5A 45 35 53 54 39 4A 46 31 32 33 34 35 36 00 00 00"
+        ),
+    },
 }
 
 
