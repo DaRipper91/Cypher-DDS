@@ -7,12 +7,12 @@ protocol logic is not yet implemented. Update this file as pieces land.
 
 | Module | Purpose | Status |
 |---|---|---|
-| `serial_conn.py` | Port discovery, connect/disconnect/reconnect, `SerialLike` protocol | stub |
-| `elm327.py` | AT init sequence (reset, echo off, linefeeds off, protocol auto) | stub |
-| `pids.py` | Mode 01 PID table + decode math (RPM, speed, coolant temp, ...) | stub |
+| `serial_conn.py` | Port discovery (`/dev/ttyUSB*`/`/dev/ttyACM*`), connect/disconnect, byte-level read-until-prompt framing | done |
+| `elm327.py` | AT init sequence, command/response framing, error detection, `ATDPN` protocol name lookup | done |
+| `pids.py` | Mode 01 PID table + decode math (RPM, speed, coolant temp, intake temp, MAF, throttle position, fuel level) | done |
 | `dtc.py` | Mode 03/04 DTC read/clear, generic P0xxx decoding | stub |
 | `vin.py` | Mode 09 VIN retrieval + WMI → manufacturer decode | stub |
-| `mock_adapter.py` | `MockELM327Adapter` — canned responses for dev without hardware | stub |
+| `mock_adapter.py` | `MockELM327Adapter` — canned AT/PID responses (`default` + `no_adapter` scenarios) for dev without hardware | done |
 
 ## Profiles (`cypher_dds.profiles`) — brand-specific
 
@@ -38,19 +38,16 @@ pre-2008 or non-CAN (ISO9141, KWP2000, J1850).
 
 ## Tests (`tests/`)
 
-Scaffolded, not yet exercising real logic (there isn't any yet). PID decoding
-math is pure logic and will be the first thing worth testing properly once
-`pids.py` has real formulas.
+`test_pids.py`, `test_elm327.py`, and `test_serial_conn.py` exercise real
+logic now — PID decode math, the full ELM327 init/command/protocol-detection
+flow against `MockELM327Adapter`, and the serial connection contract. DTC and
+VIN modules are still scaffolded pending their corresponding core module.
 
 ## Next steps (not yet started)
 
-1. Implement `SerialLike` + `SerialConnection` (real pyserial backend) and
-   `MockELM327Adapter` against the same interface.
-2. Implement ELM327 init sequence and command/response framing.
-3. Implement Mode 01 PID decode table + tests.
-4. Implement Mode 03/04 DTC handling + generic P0xxx table.
-5. Implement Mode 09 VIN retrieval/decoding + WMI table for the five target
+1. Implement Mode 03/04 DTC handling + generic P0xxx table.
+2. Implement Mode 09 VIN retrieval/decoding + WMI table for the five target
    brands.
-6. Flesh out GM/Ford/Dodge profiles with real DTC and enhanced-PID tables
+3. Flesh out GM/Ford/Dodge profiles with real DTC and enhanced-PID tables
    where public documentation supports it.
-7. Wire up the Textual dashboard against `core` (or the mock adapter).
+4. Wire up the Textual dashboard against `core` (or the mock adapter).

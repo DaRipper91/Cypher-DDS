@@ -8,38 +8,70 @@ this one.
 
 from __future__ import annotations
 
+# Canned command -> response tables, keyed by scenario name. Responses are
+# the ASCII text ELM327 would send back (without the trailing '\r>' framing
+# — write() adds that). Values mirror the public ELM327 AT command set and
+# the SAE J1979 Mode 01 positive-response format (41 <PID> <data bytes...>).
+_SCENARIOS: dict[str, dict[str, str]] = {
+    "default": {
+        "ATZ": "ELM327 v1.5",
+        "ATE0": "OK",
+        "ATL0": "OK",
+        "ATH0": "OK",
+        "ATSP0": "OK",
+        "ATDPN": "A6",  # auto-detected protocol 6: ISO 15765-4 CAN 11bit/500k
+        "010C": "41 0C 1A F8",  # RPM = 1726
+        "0105": "41 05 7B",  # coolant temp = 83 C
+        "0D": "41 0D 5A",  # speed = 90 km/h (mode 01 without leading '01' too)
+        "010D": "41 0D 5A",
+    },
+    "no_adapter": {},  # every command times out — simulates nothing connected
+}
+
 
 class MockELM327Adapter:
-    """In-memory stand-in for a pyserial ``Serial`` talking to a real ELM327.
-
-    TODO:
-      - canned response table keyed by AT/PID command string
-      - simulate the '>' prompt terminator ELM327 uses to end a response
-      - configurable scenario presets (e.g. "gm_2015_idle", "no_adapter",
-        "dtc_present") so the TUI can be exercised against varied fake data
-      - write(data) queues a command; read()/readline() drain the canned
-        response for the last command written
-    """
+    """In-memory stand-in for a pyserial ``Serial`` talking to a real ELM327."""
 
     def __init__(self, scenario: str = "default") -> None:
         self.scenario = scenario
         self._is_open = True
+        self._out_buffer = bytearray()
+        self._responses = _SCENARIOS.get(scenario, _SCENARIOS["default"])
 
     def write(self, data: bytes) -> int:
-        raise NotImplementedError
+        if not self._is_open:
+            raise OSError("adapter is closed")
+        command = data.decode("ascii", errors="replace").strip().upper()
+        response = self._responses.get(command)
+        if response is not None:
+            self._out_buffer += response.encode("ascii") + b"\r>"
+        # Unknown command or "no_adapter" scenario: no bytes queued, so the
+        # next read() times out exactly like a real disconnected adapter.
+        return len(data)
 
     def read(self, size: int = 1) -> bytes:
-        raise NotImplementedError
+        if not self._out_buffer:
+            return b""
+        chunk = bytes(self._out_buffer[:size])
+        del self._out_buffer[:size]
+        return chunk
 
     def readline(self) -> bytes:
-        raise NotImplementedError
+        if b"\r" not in self._out_buffer:
+            line = bytes(self._out_buffer)
+            self._out_buffer.clear()
+            return line
+        idx = self._out_buffer.index(b"\r") + 1
+        line = bytes(self._out_buffer[:idx])
+        del self._out_buffer[:idx]
+        return line
 
     def close(self) -> None:
         self._is_open = False
 
     @property
     def in_waiting(self) -> int:
-        raise NotImplementedError
+        return len(self._out_buffer)
 
     @property
     def is_open(self) -> bool:

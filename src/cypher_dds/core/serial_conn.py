@@ -1,4 +1,4 @@
-"""Serial transport: port discovery, connect/disconnect/reconnect.
+"""Serial transport: port discovery, connect/disconnect, byte-level framing.
 
 Anything that speaks bytes in/out the way pyserial's ``Serial`` does can be
 used here, including ``cypher_dds.core.mock_adapter.MockELM327Adapter``. Code
@@ -8,7 +8,10 @@ above this layer (elm327.py and up) should depend on ``SerialLike``, never on
 
 from __future__ import annotations
 
+import glob
 from typing import Protocol, runtime_checkable
+
+import serial as pyserial
 
 # Typical Linux enumeration for USB ELM327 adapters:
 #   /dev/ttyUSB*  — CH340-based clones
@@ -16,6 +19,12 @@ from typing import Protocol, runtime_checkable
 CANDIDATE_PORT_GLOBS = ("/dev/ttyUSB*", "/dev/ttyACM*")
 
 DEFAULT_BAUDRATE = 38400
+
+# ELM327 responses can be slow (ATZ resets the chip; some PID requests wait
+# on a stalled bus before timing out), so this is generous on purpose.
+DEFAULT_TIMEOUT = 2.0  # seconds
+
+PROMPT = b">"
 
 
 @runtime_checkable
@@ -36,35 +45,52 @@ class SerialLike(Protocol):
 
 
 def discover_ports() -> list[str]:
-    """Return candidate serial device paths present on this machine.
-
-    TODO: glob CANDIDATE_PORT_GLOBS (or use serial.tools.list_ports).
-    """
-    raise NotImplementedError
+    """Return candidate serial device paths present on this machine."""
+    ports: list[str] = []
+    for pattern in CANDIDATE_PORT_GLOBS:
+        ports.extend(sorted(glob.glob(pattern)))
+    return ports
 
 
 class SerialConnection:
-    """Owns a SerialLike transport; handles connect/disconnect/reconnect.
+    """Owns a SerialLike transport; handles connect/disconnect and framing.
 
-    TODO: open(port, baudrate), close(), reconnect() with backoff,
-    send_raw(bytes) -> None, read_response(terminator=b">") -> bytes.
+    A transport can be injected directly (e.g. MockELM327Adapter for
+    hardware-free development); otherwise connect() opens a real pyserial
+    port.
     """
 
     def __init__(self, transport: SerialLike | None = None) -> None:
         self._transport = transport
 
     def connect(self, port: str, baudrate: int = DEFAULT_BAUDRATE) -> None:
-        raise NotImplementedError
+        self._transport = pyserial.Serial(
+            port=port, baudrate=baudrate, timeout=DEFAULT_TIMEOUT
+        )
 
     def disconnect(self) -> None:
-        raise NotImplementedError
+        if self._transport is not None:
+            self._transport.close()
+        self._transport = None
 
     def is_connected(self) -> bool:
-        raise NotImplementedError
+        return self._transport is not None and self._transport.is_open
 
     def send_raw(self, data: bytes) -> None:
-        raise NotImplementedError
+        if self._transport is None:
+            raise ConnectionError("not connected")
+        self._transport.write(data)
 
-    def read_until_prompt(self, prompt: bytes = b">") -> bytes:
-        """ELM327 terminates responses with a '>' prompt char."""
-        raise NotImplementedError
+    def read_until_prompt(self, prompt: bytes = PROMPT) -> bytes:
+        """Read until the ELM327's '>' prompt, or until a read times out."""
+        if self._transport is None:
+            raise ConnectionError("not connected")
+        buffer = bytearray()
+        while True:
+            chunk = self._transport.read(1)
+            if not chunk:
+                break  # transport timed out with no more data
+            buffer += chunk
+            if buffer.endswith(prompt):
+                break
+        return bytes(buffer)
