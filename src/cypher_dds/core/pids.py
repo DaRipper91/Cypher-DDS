@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+from cypher_dds.core.elm327 import ELM327
+
 
 @dataclass(frozen=True)
 class PIDDefinition:
@@ -80,3 +82,20 @@ def build_request(pid: int) -> str:
     if pid not in STANDARD_PIDS:
         raise KeyError(f"Unknown or unsupported PID: {pid:#04x}")
     return f"01{pid:02X}"
+
+
+def read_pid(elm327: ELM327, pid: int) -> float:
+    """Issue a Mode 01 PID request over `elm327` and return the decoded value.
+
+    Strips the `41 <PID>` positive-response echo, converts the remaining
+    hex tokens to bytes, and hands them to decode_pid().
+    """
+    command = build_request(pid)
+    response = elm327.send_command(command)
+    tokens = response.split()
+
+    if len(tokens) >= 2 and tokens[0].upper() == "41" and tokens[1].upper() == f"{pid:02X}":
+        tokens = tokens[2:]
+
+    payload = bytes(int(token, 16) for token in tokens)
+    return decode_pid(pid, payload)

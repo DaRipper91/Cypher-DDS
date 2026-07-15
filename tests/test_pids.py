@@ -5,7 +5,10 @@ Pure logic, no hardware needed.
 
 import pytest
 
-from cypher_dds.core.pids import STANDARD_PIDS, build_request, decode_pid
+from cypher_dds.core.elm327 import ELM327
+from cypher_dds.core.mock_adapter import MockELM327Adapter
+from cypher_dds.core.pids import STANDARD_PIDS, build_request, decode_pid, read_pid
+from cypher_dds.core.serial_conn import SerialConnection
 
 
 def test_standard_pids_table_has_expected_entries():
@@ -64,3 +67,10 @@ def test_build_request():
 def test_build_request_unknown_pid_raises_key_error():
     with pytest.raises(KeyError):
         build_request(0x99)
+
+
+def test_read_pid_against_mock_adapter():
+    connection = SerialConnection(transport=MockELM327Adapter())
+    elm = ELM327(connection)
+    assert read_pid(elm, 0x0C) == 1726.0  # RPM
+    assert read_pid(elm, 0x05) == 83.0  # coolant temp

@@ -94,15 +94,17 @@ Run the test suite (pure decode-logic tests, no hardware required):
 pytest
 ```
 
-Launch the TUI:
+Launch the TUI — with no flags it connects to the mock adapter automatically:
 
 ```bash
 cypher-dds
 ```
 
+Once connected (mock or real), the dashboard runs the full init → VIN → profile-resolution → DTC-read → live-PID-read flow automatically; press `r` to re-read DTCs and live data on demand.
+
 ### Developing without a car
 
-You don't need to be plugged into a vehicle to work on this. `cypher_dds.core.mock_adapter.MockELM327Adapter` implements the same interface as a real serial connection, so the whole stack — serial layer, ELM327 commands, PID/DTC/VIN decoding, the TUI — is developable and testable against canned responses alone.
+You don't need to be plugged into a vehicle to work on this. `cypher_dds.core.mock_adapter.MockELM327Adapter` implements the same interface as a real serial connection, so the whole stack — serial layer, ELM327 commands, PID/DTC/VIN decoding, the TUI — is developable and testable against canned responses alone. `cypher-dds` uses it by default; pass `--mock-scenario no_adapter` to preview the disconnected state, or `--mock-scenario malformed_vin` for a bad-VIN response.
 
 ### Connecting real hardware
 
@@ -110,6 +112,12 @@ On Linux, USB ELM327 adapters typically enumerate as:
 
 - `/dev/ttyUSB*` — CH340-based clones
 - `/dev/ttyACM*` — FTDI / native USB-serial
+
+Point the TUI at one directly:
+
+```bash
+cypher-dds --port /dev/ttyUSB0
+```
 
 ## Project layout
 
@@ -149,7 +157,7 @@ The Toyota/Lexus and Honda/Acura profiles are intentionally empty stubs today, i
 
 ## Roadmap
 
-Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: serial transport, ELM327 command framing, Mode 01 PID decode math, Mode 03/04 DTC decode, Mode 09 VIN decode — the whole core layer — plus DTC tables for all three fleshed-out brands (GM 402, Ford 410, Dodge/Chrysler 97 P1xxx codes), a small verified set of GM/Ford enhanced PIDs, and a 353-entry `WMI_TABLE` covering all five brands' North American and major overseas manufacturing plants (sourced from NHTSA's public vPIC database). Next: growing the enhanced-PID tables further, then wiring the Textual dashboard up to live data.
+Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: the whole core layer (serial transport, ELM327 command framing, Mode 01/03/04/09 decode), DTC tables for all three fleshed-out brands (GM 402, Ford 410, Dodge/Chrysler 97 P1xxx codes), a small verified set of GM/Ford enhanced PIDs, a 353-entry `WMI_TABLE` from NHTSA's public vPIC database, and the Textual dashboard wired end to end to that real core state. Next: growing the enhanced-PID tables further, a continuous live-data polling loop, and Toyota/Honda's DTC tables.
 
 ## Safety
 

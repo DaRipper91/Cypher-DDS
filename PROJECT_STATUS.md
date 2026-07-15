@@ -1,8 +1,10 @@
 # Cypher-DDS — Project Status
 
 The core layer (serial, ELM327, PIDs, DTC, VIN) is fully implemented and
-tested against a mock adapter. Profile data and the TUI's live wiring are
-next. Update this file as pieces land.
+tested against a mock adapter, and the TUI is now wired to real core state
+end to end (connect → VIN → DTCs → live PIDs). Remaining work is deepening
+brand profile data (enhanced PIDs, B/C/U codes) and Toyota/Honda's tables.
+Update this file as pieces land.
 
 ## Core (`cypher_dds.core`) — brand-agnostic
 
@@ -10,7 +12,7 @@ next. Update this file as pieces land.
 |---|---|---|
 | `serial_conn.py` | Port discovery (`/dev/ttyUSB*`/`/dev/ttyACM*`), connect/disconnect, byte-level read-until-prompt framing | done |
 | `elm327.py` | AT init sequence, command/response framing, error detection, `ATDPN` protocol name lookup | done |
-| `pids.py` | Mode 01 PID table + decode math (RPM, speed, coolant temp, intake temp, MAF, throttle position, fuel level) | done |
+| `pids.py` | Mode 01 PID table + decode math (RPM, speed, coolant temp, intake temp, MAF, throttle position, fuel level); `read_pid()` issues a request through ELM327 and returns the decoded value | done |
 | `dtc.py` | Mode 03/04 DTC read/clear, SAE J2012 byte decode, generic P0xxx table (~40 codes) | done |
 | `vin.py` | Mode 09 VIN retrieval, WMI → manufacturer decode | done — `WMI_TABLE` has 353 entries across all 5 brands, sourced from NHTSA's public vPIC database |
 | `mock_adapter.py` | `MockELM327Adapter` — canned AT/PID/DTC/VIN responses (`default`, `no_adapter`, `malformed_vin` scenarios) for dev without hardware | done |
@@ -51,25 +53,32 @@ than padded with unverified/conflicting hex codes.
 | Module | Purpose | Status |
 |---|---|---|
 | `theme.py` | Brand accent colors (Royal Blue = connected/live + focus, Cherry Red = DTC alert), reserved for status meaning only | done |
-| `app.py` | Textual app: connection status badge + DTC alert badge are real (styled, keyboard-toggleable via demo bindings `c`/`x`); live PID readout, real serial/DTC wiring | stub |
+| `app.py` | Textual app wired to real core state: connects (real `--port` or mock adapter) in a worker thread so serial I/O never blocks the UI, runs the full ELM327 init → VIN → profile-resolution → DTC-read → live-PID-read flow, and falls back to the selected brand profile's `get_dtc_description()` when the generic table misses. `r` re-reads DTCs + live data on demand. | done — no continuous auto-polling loop yet (manual refresh only); see next steps |
 
 ## Tests (`tests/`)
 
-45 tests, 0 skipped. `test_pids.py`, `test_elm327.py`, `test_serial_conn.py`,
+50 tests, 0 skipped. `test_pids.py`, `test_elm327.py`, `test_serial_conn.py`,
 `test_dtc.py`, and `test_vin.py` all exercise real logic against
-`MockELM327Adapter`: PID decode math, the full ELM327
-init/command/protocol-detection flow, DTC byte decoding (all four
+`MockELM327Adapter`: PID decode math (including `read_pid()`), the full
+ELM327 init/command/protocol-detection flow, DTC byte decoding (all four
 letter-prefix cases, padding, error paths), `DTCReader`, WMI decoding
 (including non-US manufacturing plants and the Mercedes/DaimlerChrysler
 exclusion), and `request_vin` (including the malformed-VIN
 length-validation path). `test_profiles.py` locks in real GM, Ford, and
-Dodge/Chrysler P1xxx lookups plus the GM/Ford enhanced-PID entries as
-regression checks.
+Dodge/Chrysler P1xxx lookups plus the GM/Ford enhanced-PID entries.
+`test_tui_app.py` runs Textual's headless harness end to end against the
+mock adapter (successful connect + VIN/profile/DTC/live-data resolution,
+manual refresh, and two connection-failure paths), awaiting the worker
+thread via `app.workers.wait_for_complete()` before asserting UI state.
 
 ## Next steps (not yet started)
 
 1. Add Dodge/Chrysler enhanced PIDs and B/C/U-series codes for all three
    brands where documented; keep expanding GM/Ford enhanced PIDs as more
    are independently confirmed.
-2. Wire up the Textual dashboard against `core` (or the mock adapter) —
-   connect the demo status widgets to real serial/DTC/VIN state.
+2. Consider a continuous live-data polling loop (currently manual `r`
+   refresh only) and a richer DTC list view (codes + full descriptions,
+   a "clear codes" action) once there's real hardware to validate timing
+   against.
+3. Fill in the Toyota/Lexus and Honda/Acura DTC tables — currently the
+   only two brands with zero profile data beyond the WMI table.
