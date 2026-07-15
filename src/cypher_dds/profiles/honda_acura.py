@@ -1,4 +1,4 @@
-"""Honda/Acura (2008+, CAN) vehicle profile.
+"""Honda/Acura (1996+; ISO 9141-2/KWP2000 pre-2008, CAN 2008+) vehicle profile.
 
 Deliberately an empty stub for this phase — see toyota_lexus.py docstring
 for why. Same interface, empty tables, proves the plugin architecture scales

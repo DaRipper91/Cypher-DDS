@@ -58,17 +58,23 @@ Two layers, deliberately kept apart:
 
 ## Supported vehicles
 
+1996 is the year the US OBD-II mandate took effect, so it's Cypher-DDS's floor:
+
 | Brand | Years | Bus | Status |
 |---|---|---|---|
-| GM | 2008+ | CAN, 11-bit | 🚧 in progress |
-| Ford | 2008+ | CAN | 🚧 in progress — see note below |
-| Dodge / Chrysler | 2008+ | CAN | 🚧 in progress |
-| Toyota / Lexus | 2008+ | CAN | 🌱 stub (proves the plugin interface) |
-| Honda / Acura | 2008+ | CAN | 🌱 stub (proves the plugin interface) |
+| GM | 1996+ | J1850 VPW (1996–2007ish) → CAN (2008+) | 🚧 in progress |
+| Ford | 1996+ | J1850 PWM (1996–2007ish) → CAN (2008+) | 🚧 in progress — see note below |
+| Dodge / Chrysler | 1996+ | ISO 9141-2 / ISO 14230-4 KWP (1996–2007ish) → CAN (2008+) | 🚧 in progress — see note below |
+| Toyota / Lexus | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🌱 stub (proves the plugin interface) |
+| Honda / Acura | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🌱 stub (proves the plugin interface) |
 
-> **Ford note:** Ford splits data across the standard diagnostic CAN bus and a proprietary MS-CAN (body/comfort systems). A basic ELM327 only has visibility into standard CAN — Cypher-DDS does not attempt to bridge MS-CAN in v1.
+Cypher-DDS never hardcodes a protocol — the ELM327's `ATSP0` auto-detect handles J1850 PWM/VPW, ISO 9141-2, ISO 14230-4 KWP2000, and CAN transparently, and Mode 01/03/09 decoding is identical at the application layer regardless of which one a vehicle actually uses. Widening coverage from 2008+ to 1996+ was a documentation/scope change, not a core code change.
 
-**Explicitly out of scope for now:** VAG, BMW, Mercedes (require UDS/ISO 14229 session handling — a different architecture), and anything pre-2008 or non-CAN (ISO9141, KWP2000, J1850).
+> **Ford note:** Ford splits data across the standard diagnostic bus and a proprietary MS-CAN (body/comfort systems). A basic ELM327 only has visibility into the standard bus — Cypher-DDS does not attempt to bridge MS-CAN in v1.
+
+> **Dodge/Chrysler note:** Some Chrysler-group vehicles also run a proprietary SCI/CCD bus for body and instrument-cluster diagnostics, separate from the standard OBD2 pins a basic ELM327 talks to. Like Ford's MS-CAN, that's out of scope for v1 — Cypher-DDS only reaches what's on the standard, federally-mandated OBD2 protocol.
+
+**Explicitly out of scope for now:** VAG, BMW, Mercedes (require UDS/ISO 14229 session handling — a different architecture), and anything pre-1996 (before the OBD-II mandate).
 
 See [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for a module-by-module implemented-vs-stubbed breakdown.
 

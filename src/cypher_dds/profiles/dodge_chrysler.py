@@ -1,10 +1,15 @@
-"""Dodge/Chrysler (2008+, CAN) vehicle profile.
+"""Dodge/Chrysler (1996+) vehicle profile.
 
-Priority 3 target.
+ISO 9141-2 / ISO 14230-4 KWP2000 pre-2008, CAN 2008+ — the ELM327's
+protocol auto-detect handles the difference transparently, so this profile
+(and cypher_dds.core) applies unchanged across the whole range. Priority 3
+target.
 
-Scope note: pre-2008 Chrysler group vehicles used SCI (Serial Communications
-Interface), not CAN, and are out of scope for v1 — this profile assumes a
-2008+ CAN-bus vehicle.
+Scope note: some Chrysler-group vehicles also run a proprietary SCI/CCD bus
+for body and instrument-cluster diagnostics, separate from the standard
+OBD2 pins a basic ELM327 talks to. Like Ford's MS-CAN, that bus is out of
+scope for v1 — this profile only covers what's reachable on the standard,
+federally-mandated OBD2 protocol.
 """
 
 from __future__ import annotations

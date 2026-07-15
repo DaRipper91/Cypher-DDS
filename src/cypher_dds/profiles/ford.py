@@ -1,14 +1,17 @@
-"""Ford (2008+, CAN) vehicle profile.
+"""Ford (1996+) vehicle profile.
 
-Priority 2 target.
+J1850 PWM pre-2008, CAN 2008+ — the ELM327's protocol auto-detect handles
+the difference transparently, so this profile (and cypher_dds.core) applies
+unchanged across the whole range. Priority 2 target.
 
-IMPORTANT — MS-CAN limitation: Ford splits vehicle data across the standard
-diagnostic CAN bus and a proprietary MS-CAN (medium-speed CAN, typically body
-and comfort systems). A basic ELM327 adapter only has visibility into the
-standard OBD2 CAN bus. Cypher-DDS v1 does NOT attempt to bridge or access
-MS-CAN — anything living there (many body control / comfort PIDs) is simply
-unreachable through this tool for now. Do not treat missing Ford data as a
-bug without checking whether it's an MS-CAN-only parameter first.
+IMPORTANT — MS-CAN limitation (2008+ vehicles): Ford splits vehicle data
+across the standard diagnostic CAN bus and a proprietary MS-CAN
+(medium-speed CAN, typically body and comfort systems). A basic ELM327
+adapter only has visibility into the standard OBD2 bus. Cypher-DDS v1 does
+NOT attempt to bridge or access MS-CAN — anything living there (many body
+control / comfort PIDs) is simply unreachable through this tool for now.
+Do not treat missing Ford data as a bug without checking whether it's an
+MS-CAN-only parameter first.
 """
 
 from __future__ import annotations

@@ -20,15 +20,21 @@ next. Update this file as pieces land.
 | Profile | Coverage target | Status |
 |---|---|---|
 | `base.py` | `VehicleProfile` interface + registry | stub |
-| `gm.py` | GM, 2008+, CAN 11-bit | stub, priority 1 |
-| `ford.py` | Ford, 2008+, CAN. **Only standard OBD2 CAN is reachable via a basic ELM327 — MS-CAN (body/comfort systems) is out of scope for v1.** | stub, priority 2 |
-| `dodge_chrysler.py` | Dodge/Chrysler, 2008+, CAN. Pre-2008 SCI vehicles are out of scope for v1. | stub, priority 3 |
-| `toyota_lexus.py` | Toyota/Lexus, 2008+, CAN | empty stub — proves plugin architecture is brand-agnostic |
-| `honda_acura.py` | Honda/Acura, 2008+, CAN | empty stub — proves plugin architecture is brand-agnostic |
+| `gm.py` | GM, 1996+ (J1850 VPW pre-2008, CAN 2008+) | stub, priority 1 |
+| `ford.py` | Ford, 1996+ (J1850 PWM pre-2008, CAN 2008+). **Only the standard OBD2 bus is reachable via a basic ELM327 — MS-CAN (body/comfort systems) is out of scope for v1.** | stub, priority 2 |
+| `dodge_chrysler.py` | Dodge/Chrysler, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+). The proprietary SCI/CCD body bus is out of scope for v1 (same category as Ford's MS-CAN). | stub, priority 3 |
+| `toyota_lexus.py` | Toyota/Lexus, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+) | empty stub — proves plugin architecture is brand-agnostic |
+| `honda_acura.py` | Honda/Acura, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+) | empty stub — proves plugin architecture is brand-agnostic |
+
+Protocol selection is fully handled by the ELM327's auto-detect (`ATSP0`) —
+`cypher_dds.core` already decodes Mode 01/03/09 identically regardless of
+whether the transport is J1850, ISO 9141-2, KWP2000, or CAN, so widening
+coverage from 2008+ to 1996+ needed no core changes, only updated scope
+docs/profile metadata.
 
 Explicitly out of scope for this phase: VAG, BMW, Mercedes (require UDS/ISO
 14229 session handling — architecturally different), and anything
-pre-2008 or non-CAN (ISO9141, KWP2000, J1850).
+pre-1996 (before the US OBD-II mandate).
 
 ## TUI (`cypher_dds.tui`)
 

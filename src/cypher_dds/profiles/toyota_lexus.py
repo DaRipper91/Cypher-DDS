@@ -1,4 +1,4 @@
-"""Toyota/Lexus (2008+, CAN) vehicle profile.
+"""Toyota/Lexus (1996+; ISO 9141-2/KWP2000 pre-2008, CAN 2008+) vehicle profile.
 
 Deliberately an empty stub for this phase. Its job right now is to prove the
 plugin architecture is truly brand-agnostic: this file follows the exact
