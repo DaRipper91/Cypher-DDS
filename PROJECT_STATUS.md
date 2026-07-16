@@ -105,6 +105,7 @@ presentation layer should own the other's shared branding.
 |---|---|---|---|
 | Windows `.exe` | PyInstaller (`cypher-dds.spec`, repo root) — bundles the *existing* TUI app as-is, no new UI code | `.github/workflows/build-windows.yml`, `windows-latest` runner | **CI build confirmed green** (1m17s) — `dist/cypher-dds.exe`, 14.7MB artifact |
 | Android `.apk` | Buildozer (`buildozer.spec` + `main.py`, repo root) — packages the new Kivy mobile app; runs the official `ghcr.io/kivy/buildozer` Docker image directly, not the `ArtemSBulgakov/buildozer-action` GitHub Action (see below) | `.github/workflows/build-android.yml`, `ubuntu-latest` runner | **CI build confirmed green** (13m53s cold), 21.4MB debug APK artifact |
+| Linux `.AppImage` | PyInstaller (same `cypher-dds.spec` as Windows, same TUI binary) wrapped into a single-file AppImage via `appimagetool`, so it runs unmodified on the major distro families (Ubuntu, Fedora, Arch, Debian, openSUSE, …) with no `.deb`/`.rpm`/pacman packages to maintain separately | `.github/workflows/build-linux.yml`, `ubuntu-22.04` runner (deliberately not `ubuntu-latest` — older glibc runs on more distros) | pushed, not yet watched through CI — see below |
 
 Both were actually pushed and watched through CI to green, not just written
 and assumed to work — three real failures got fixed along the way, all
