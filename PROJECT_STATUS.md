@@ -187,8 +187,80 @@ they build on what already exists:
 - **Export a scan report** (Markdown/JSON) of the current session's
   VIN/DTCs/live data — built from Cypher-DDS's own real data only, unlike
   the ThinkCar-derived report earlier in this project's history.
-- A **desktop GUI** (Tkinter/PySide/etc., framework TBD) is still just a
-  backlog idea, not started — `cypher_dds.mobile` proves `DiagnosticSession`
-  is genuinely reusable across presentation layers, which is exactly what
-  a desktop GUI would also lean on. No framework decision made yet; that's
-  a real choice for a future conversation, not something to default into.
+
+### Desktop GUI (planned — framework decided, not started)
+
+**Framework: Tkinter**, stdlib — no new dependency (unlike mobile's `kivy`
+extra), no LGPL/GPL licensing question (PySide/PyQt), and it packages with
+the same PyInstaller toolchain `cypher-dds.spec` already uses for the
+Windows `.exe`. Module name: `cypher_dds.gui`, matching the placeholder
+already referenced in `session.py`'s and `tui/app.py`'s docstrings.
+
+Plan, in order:
+
+1. **`cypher_dds/gui/app.py`** — a root Tk window driving `DiagnosticSession`
+   directly, same architectural role as `tui.app.CypherDDSApp` and
+   `mobile.app.CypherDDSMobileApp`: presentation only, zero protocol logic
+   duplicated a third time.
+2. **Threading**: blocking serial I/O on a plain background thread (same
+   pattern as `mobile/app.py`, since Tkinter has no worker abstraction like
+   Textual's `run_worker`), posting results back to the UI thread via
+   `Tk.after()` — the same role `App.call_from_thread()` and
+   `Clock.schedule_once()` play in the other two UIs.
+3. **Reuse, don't reinvent**: `DEFAULT_LIVE_PIDS` for the live-data row and
+   the `ROYAL_BLUE`/`CHERRY_RED` constants from `cypher_dds.theme` for the
+   same connected/DTC-alert status coloring the TUI and mobile app already
+   use.
+4. **Feature parity first**: connect (USB/Bluetooth/mock), VIN resolve, DTC
+   read, manual live-data refresh — matching what TUI/mobile already do —
+   before picking up any of the other backlog items above (continuous
+   polling, richer DTC view, freeze frame, etc.); those land in all
+   presentation layers together, not desktop-first.
+5. **Bluetooth comes free on Linux**: unlike `cypher_dds.mobile` (which
+   needs an unwritten pyjnius bridge to `android.bluetooth.BluetoothSocket`),
+   the desktop GUI can call `core.bluetooth_adapter.BluetoothSerialAdapter`
+   directly — it's already implemented for desktop Linux, just unused by
+   any UI yet.
+6. **Packaging**: extend `cypher-dds.spec` (or add a sibling spec) with a
+   second `EXE` entry point at `src/cypher_dds/gui/app.py`,
+   `console=False` since it's a real window, and a matching
+   `[project.scripts]` entry once the module exists.
+7. **CI**: `.github/workflows/build-windows.yml` currently builds and
+   uploads only `cypher-dds.exe` (TUI) from `cypher-dds.spec`'s single
+   hardcoded `Analysis` entry point — it won't pick up the GUI build for
+   free. Once step 6 lands, add a second `pyinstaller`/`upload-artifact`
+   step (or a new spec + step) to that workflow so the GUI `.exe` is
+   actually built and verified in CI too, same as the TUI one already is.
+
+### Bluetooth beyond Linux (planned — not started)
+
+Today Bluetooth works on exactly one platform: desktop Linux, via
+`core.bluetooth_adapter.BluetoothSerialAdapter`'s stdlib
+`socket.AF_BLUETOOTH` RFCOMM sockets — already wired into the TUI's
+`--bluetooth` flag and (per this file's Desktop GUI section) free for the
+planned Tkinter GUI too. Every other platform+UI combination is either
+unimplemented or raises `BLUETOOTH_SUPPORTED`'s clear "use USB instead"
+`RuntimeError`. Two separate gaps, not one:
+
+1. **Windows/macOS desktop** — `socket.AF_BLUETOOTH` doesn't exist there;
+   the docstring in `bluetooth_adapter.py` already flags PyBluez as the
+   candidate. That's a real dependency decision to make later, not a clean
+   stdlib swap like the GUI framework was: PyBluez's Windows RFCOMM support
+   is usable but the project is effectively unmaintained upstream, and its
+   macOS backend has been broken for years — so macOS may end up staying
+   USB-only (documented, same clear-error pattern already in place) even
+   after Windows gets a real backend. Whatever backend lands, it only needs
+   to implement `BluetoothSerialAdapter`'s existing `SerialLike` surface
+   (`write`/`read`/`readline`/`close`/`in_waiting`/`is_open`) — `SerialConnection`
+   and everything above it stays unchanged, same as this file's Desktop GUI
+   section describes for the Tkinter work.
+2. **Android (`cypher_dds.mobile`)** — needs the pyjnius bridge to
+   `android.bluetooth.BluetoothSocket` that `mobile/app.py`'s docstring
+   already calls out as unwritten. Same deal: implement the `SerialLike`
+   surface once, and `DiagnosticSession`/`SerialConnection` need no changes
+   to use it. Can't be verified without a physical Android device, same
+   caveat as the rest of `cypher_dds.mobile`.
+
+Neither gap blocks the Desktop GUI plan above — that one ships Linux
+Bluetooth on day one and picks up Windows/macOS whenever gap 1 closes,
+with no GUI-layer changes required either time.
