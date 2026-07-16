@@ -75,14 +75,15 @@ presentation layer should own the other's shared branding.
 
 | Module | Purpose | Status |
 |---|---|---|
-| `app.py` | Kivy app wired to the same `DiagnosticSession` as the TUI: connect/VIN/DTC/live-data flow on a background thread, results posted to the main thread via `Clock.schedule_once`. Mock adapter only — see caveats below. | done, but **unverified beyond CI packaging** |
+| `app.py` | Kivy app wired to the same `DiagnosticSession` as the TUI: connect/VIN/DTC/live-data flow on a background thread, results posted to the main thread via `Clock.schedule_once`. Mock adapter only — see caveats below. | done, **CI packaging confirmed green**, unverified beyond that |
 
 **Real caveats, not hedging:**
 - **Never run on a physical Android device or emulator.** This dev
-  environment has no Android SDK/toolchain. The only thing actually
-  verified is that `.github/workflows/build-android.yml` successfully
-  *packages* the app into an APK via Buildozer on a GitHub Actions runner.
-  A green CI build means "it built," not "it runs correctly on a phone."
+  environment has no Android SDK/toolchain. What's actually verified is
+  that `.github/workflows/build-android.yml` successfully *packages* the
+  app into a real 21.4MB APK via Buildozer on a GitHub Actions runner
+  (confirmed by pushing and watching the run — not assumed). A green CI
+  build means "it built," not "it runs correctly on a phone."
 - **Android Bluetooth is not implemented.** `BluetoothSerialAdapter` uses
   desktop Linux's `socket.AF_BLUETOOTH` (BlueZ), which Android doesn't
   expose to Python the same way. A real backend needs a `pyjnius` bridge to
@@ -102,14 +103,33 @@ presentation layer should own the other's shared branding.
 
 | Target | Tooling | Workflow | Status |
 |---|---|---|---|
-| Windows `.exe` | PyInstaller (`cypher-dds.spec`, repo root) — bundles the *existing* TUI app as-is, no new UI code | `.github/workflows/build-windows.yml`, `windows-latest` runner | done — CI packages `dist/cypher-dds.exe` as a build artifact on every push to `main`/tag |
-| Android `.apk` | Buildozer (`buildozer.spec` + `main.py`, repo root) — packages the new Kivy mobile app | `.github/workflows/build-android.yml`, `ubuntu-latest` runner via `ArtemSBulgakov/buildozer-action` | done — CI packages the debug APK as a build artifact; see Mobile caveats above |
+| Windows `.exe` | PyInstaller (`cypher-dds.spec`, repo root) — bundles the *existing* TUI app as-is, no new UI code | `.github/workflows/build-windows.yml`, `windows-latest` runner | **CI build confirmed green** (1m17s) — `dist/cypher-dds.exe`, 14.7MB artifact |
+| Android `.apk` | Buildozer (`buildozer.spec` + `main.py`, repo root) — packages the new Kivy mobile app; runs the official `ghcr.io/kivy/buildozer` Docker image directly, not the `ArtemSBulgakov/buildozer-action` GitHub Action (see below) | `.github/workflows/build-android.yml`, `ubuntu-latest` runner | **CI build confirmed green** (13m53s cold), 21.4MB debug APK artifact |
+
+Both were actually pushed and watched through CI to green, not just written
+and assumed to work — three real failures got fixed along the way, all
+external/upstream, not app bugs:
+1. `ArtemSBulgakov/buildozer-action`'s own Dockerfile layers extra apt
+   packages onto the `kivy/buildozer` base image and pulls in
+   `ppa:openjdk-r/ppa`, which doesn't have a Release file for that image's
+   Ubuntu "resolute" yet — every build failed before even checking out this
+   repo. Fixed by driving `ghcr.io/kivy/buildozer` directly (Kivy's own
+   documented Docker usage) instead of going through that action.
+2. `sdkmanager`'s Android SDK license prompt is interactive; a plain
+   `docker run` left it unanswered and build-tools install got skipped.
+   Fixed with `yes | docker run --interactive ...`.
+3. `python-for-android`'s CPython 3.14 recipe calls `preadv`/`pwritev`
+   (`Python/remote_debugging.c`, a 3.13+ remote-debugging feature); Android's
+   bionic libc doesn't expose those before API 24. Fixed by bumping
+   `android.minapi` from 23 to 24 in `buildozer.spec`.
 
 Both are CI-built by necessity: PyInstaller must run on the target OS (no
 cross-compiling a `.exe` from Linux), and Buildozer needs a full Android
-SDK/NDK toolchain this dev environment doesn't have. Neither artifact has
-been installed and run on real end-user hardware yet — that's the actual
-next verification step for both, not something achievable from here.
+SDK/NDK toolchain this dev environment doesn't have. **What CI green does
+NOT prove:** neither artifact has been installed and run on real end-user
+hardware — the `.exe` has never been launched on an actual Windows machine,
+the `.apk` has never been installed on a physical Android device or
+emulator. That's the real next verification step for both.
 
 ## Tests (`tests/`)
 
