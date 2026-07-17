@@ -12,6 +12,8 @@ Live PID data. DTC reads. VIN decoding. Early bi-directional action support. No 
 
 </div>
 
+> **Noticeable project update — July 17, 2026:** Cypher-DDS now has a working desktop Tkinter GUI and a significantly expanded Android Kivy GUI surface. The desktop GUI now includes a structured DTC table, clear-DTC confirmation flow, action-category filtering, richer action detail, and shared session-driven behavior with the TUI. The Android GUI now mirrors more of that workflow in code, including DTC detail rendering, clear-DTC confirmation, and action filtering. Real packaged runtime validation on Windows/Linux and real-device Android validation are still pending.
+
 ## What Cypher-DDS is
 
 Cypher-DDS is a Python-based OBD-II diagnostic project built around a shared diagnostic core and multiple operator surfaces:
@@ -36,6 +38,15 @@ Implemented today:
 - VIN retrieval and WMI-based make selection
 - cross-make action catalog with confirmation-gated mutating actions
 - first OEM-specific enhanced-data actions for GM and Ford
+- desktop GUI workflow with:
+  - structured DTC detail table
+  - clear-DTC confirmation flow
+  - action category filtering
+  - richer action descriptions/danger notes
+- Android GUI workflow in code with:
+  - DTC detail rendering
+  - clear-DTC confirmation flow
+  - action category filtering
 
 Not implemented as broad production support:
 
@@ -119,7 +130,7 @@ Best-supported runtime target today.
 
 - TUI works here
 - desktop Bluetooth works here
-- desktop GUI exists here
+- desktop GUI exists here and is now materially beyond MVP shell status
 
 ### Windows desktop
 
@@ -164,6 +175,15 @@ Run the desktop GUI:
 cypher-dds-gui
 ```
 
+Current desktop GUI highlights:
+
+- mock, USB, and Linux Bluetooth connection modes
+- VIN and resolved make display
+- structured DTC table with descriptions
+- clear-DTC button with confirmation
+- live data summary
+- action list with category filtering and support/danger details
+
 By default, the project uses the mock adapter when no real transport is selected.
 
 ## Real hardware use
@@ -206,6 +226,7 @@ Key docs in this repo:
 - [plans/00-ROADMAP.md](plans/00-ROADMAP.md)
 - [plans/01-GUI-PLAN.md](plans/01-GUI-PLAN.md)
 - [plans/02-ANDROID-VALIDATION.md](plans/02-ANDROID-VALIDATION.md)
+- [plans/03-DESKTOP-GUI-VALIDATION.md](plans/03-DESKTOP-GUI-VALIDATION.md)
 
 ## Safety
 

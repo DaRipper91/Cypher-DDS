@@ -32,6 +32,12 @@ def test_read_live_data_before_connect_raises():
         session.read_live_data()
 
 
+def test_clear_dtcs_before_connect_raises():
+    session = DiagnosticSession()
+    with pytest.raises(NotConnectedError):
+        session.clear_dtcs()
+
+
 def test_full_session_flow_against_mock_adapter():
     session = DiagnosticSession()
     assert session.connected is False
@@ -92,3 +98,10 @@ def test_connect_routes_bluetooth_address_to_connect_bluetooth():
 
         mock_connect_bt.assert_called_once_with("AA:BB:CC:DD:EE:FF", 5)
         mock_connect_usb.assert_not_called()
+
+
+def test_clear_dtcs_succeeds_against_mock_adapter():
+    session = DiagnosticSession()
+    session.connect()
+
+    session.clear_dtcs()

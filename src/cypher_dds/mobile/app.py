@@ -35,6 +35,14 @@ from kivy.uix.textinput import TextInput
 
 import cypher_dds.profiles  # noqa: F401 — importing this registers all built-in vehicle profiles
 from cypher_dds.core.actions import DiagnosticAction
+from cypher_dds.core.dtc import DTC
+from cypher_dds.ui_format import (
+    action_category_labels,
+    action_display_label,
+    format_dtc_detail_lines,
+    format_dtc_summary,
+    format_live_summary,
+)
 from cypher_dds.core.vin import VINInfo
 from cypher_dds.session import DEFAULT_LIVE_PIDS, DiagnosticSession
 from cypher_dds.theme import CHERRY_RED, ROYAL_BLUE
@@ -62,12 +70,13 @@ class CypherDDSMobileApp(App):
     def build(self):
         self._session = DiagnosticSession()
         self._actions_by_label: dict[str, DiagnosticAction] = {}
+        self._actions_by_key: dict[str, DiagnosticAction] = {}
 
         root = BoxLayout(orientation="vertical", padding=16, spacing=8)
-        controls = BoxLayout(orientation="vertical", size_hint_y=None, height=180, spacing=6)
+        controls = BoxLayout(orientation="vertical", size_hint_y=None, height=236, spacing=6)
         mode_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=40, spacing=8)
         address_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=40, spacing=8)
-        actions_row = BoxLayout(orientation="vertical", size_hint_y=None, height=160, spacing=8)
+        actions_row = BoxLayout(orientation="vertical", size_hint_y=None, height=252, spacing=8)
 
         self.mode_spinner = Spinner(
             text="Mock adapter",
@@ -95,9 +104,29 @@ class CypherDDSMobileApp(App):
         self.status_label = Label(text="○ NO ADAPTER", color=_MUTED_RGBA, size_hint_y=None, height=40)
         self.vehicle_label = Label(text="VIN: —", size_hint_y=None, height=32)
         self.dtc_label = Label(text="✓ NO CODES STORED", color=_MUTED_RGBA, size_hint_y=None, height=40)
+        self.dtc_detail_label = Label(
+            text="No stored DTC details.",
+            size_hint_y=None,
+            height=88,
+            halign="left",
+            valign="top",
+            text_size=(None, None),
+        )
         self.live_label = Label(text=self._live_placeholder(), size_hint_y=None, height=48)
-        self.refresh_button = Button(text="Refresh", size_hint_y=None, height=48, disabled=True)
+        button_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=48, spacing=8)
+        self.refresh_button = Button(text="Refresh", size_hint=(0.5, None), height=48, disabled=True)
         self.refresh_button.bind(on_press=lambda _btn: self._start_refresh())
+        self.clear_dtcs_button = Button(text="Clear DTCs", size_hint=(0.5, None), height=48, disabled=True)
+        self.clear_dtcs_button.bind(on_press=lambda _btn: self._confirm_clear_dtcs())
+        button_row.add_widget(self.refresh_button)
+        button_row.add_widget(self.clear_dtcs_button)
+        self.action_category_spinner = Spinner(
+            text="all",
+            values=("all",),
+            size_hint=(1, None),
+            height=40,
+            disabled=True,
+        )
         self.action_spinner = Spinner(
             text="No actions available",
             values=(),
@@ -105,26 +134,30 @@ class CypherDDSMobileApp(App):
             height=40,
             disabled=True,
         )
+        self.action_description_label = Label(text="Description: —", size_hint_y=None, height=64)
         self.action_support_label = Label(text="Support: —", size_hint_y=None, height=32)
-        self.action_danger_label = Label(text="Danger: —", size_hint_y=None, height=48)
+        self.action_danger_label = Label(text="Danger: —", size_hint_y=None, height=64)
         self.action_button = Button(text="Run Action", size_hint_y=None, height=48, disabled=True)
         self.action_button.bind(on_press=lambda _btn: self._confirm_action())
         self.log_label = Label(text="Log: waiting for connection", valign="top")
 
+        actions_row.add_widget(self.action_category_spinner)
         actions_row.add_widget(self.action_spinner)
+        actions_row.add_widget(self.action_description_label)
         actions_row.add_widget(self.action_support_label)
         actions_row.add_widget(self.action_danger_label)
         actions_row.add_widget(self.action_button)
 
         controls.add_widget(mode_row)
         controls.add_widget(address_row)
-        controls.add_widget(self.refresh_button)
+        controls.add_widget(button_row)
 
         for widget in (
             controls,
             self.status_label,
             self.vehicle_label,
             self.dtc_label,
+            self.dtc_detail_label,
             self.live_label,
             actions_row,
         ):
@@ -140,6 +173,13 @@ class CypherDDSMobileApp(App):
     def _live_placeholder() -> str:
         return "   ".join(f"{label}: —" for _pid, label, _unit in DEFAULT_LIVE_PIDS)
 
+    def _selected_filtered_actions(self) -> tuple[DiagnosticAction, ...]:
+        selected_category = self.action_category_spinner.text
+        actions = tuple(self._actions_by_key.values())
+        if selected_category == "all":
+            return actions
+        return tuple(action for action in actions if action.category.value == selected_category)
+
     # ── background-thread work (blocking serial I/O only, no UI access) ────
 
     def _start_connect(self) -> None:
@@ -148,6 +188,10 @@ class CypherDDSMobileApp(App):
     def _start_refresh(self) -> None:
         if self._session.connected:
             threading.Thread(target=self._refresh, daemon=True).start()
+
+    def _start_clear_dtcs(self) -> None:
+        if self._session.connected:
+            threading.Thread(target=self._clear_dtcs, daemon=True).start()
 
     def _connect(self) -> None:
         try:
@@ -171,16 +215,28 @@ class CypherDDSMobileApp(App):
         self._refresh()
 
     def _refresh(self) -> None:
-        codes: tuple[str, ...] = ()
+        dtcs: tuple[DTC, ...] = ()
         try:
-            dtcs = self._session.read_dtcs()
-            codes = tuple(d.code for d in dtcs)
+            dtcs = tuple(self._session.read_dtcs())
         except Exception:  # noqa: BLE001 — a bad DTC read shouldn't crash the app
             pass
-        Clock.schedule_once(lambda _dt: self._on_dtcs_resolved(codes), 0)
+        Clock.schedule_once(lambda _dt: self._on_dtcs_resolved(dtcs), 0)
 
         values = self._session.read_live_data()
         Clock.schedule_once(lambda _dt: self._on_pid_values(values), 0)
+
+    def _clear_dtcs(self) -> None:
+        try:
+            self._session.clear_dtcs()
+        except Exception as exc:  # noqa: BLE001
+            Clock.schedule_once(
+                lambda _dt: setattr(self.log_label, "text", f"Log: DTC clear failed — {exc}"),
+                0,
+            )
+            return
+
+        Clock.schedule_once(lambda _dt: setattr(self.log_label, "text", "Log: DTC clear succeeded"), 0)
+        self._refresh()
 
     # ── main-thread UI updates ──────────────────────────────────────────────
 
@@ -193,6 +249,7 @@ class CypherDDSMobileApp(App):
         self.status_label.text = f"● LIVE — {protocol}"
         self.status_label.color = _ROYAL_BLUE_RGBA
         self.refresh_button.disabled = False
+        self.clear_dtcs_button.disabled = False
         self.log_label.text = f"Log: connected — {protocol}"
 
     def _on_vin_resolved(self, vin_info: VINInfo | None) -> None:
@@ -205,32 +262,53 @@ class CypherDDSMobileApp(App):
                 f"VIN: {vin_info.vin} → unrecognized manufacturer (WMI {vin_info.wmi})"
             )
 
-    def _on_dtcs_resolved(self, codes: tuple[str, ...]) -> None:
-        if codes:
-            self.dtc_label.text = f"⚠ {len(codes)} DTC(S): {', '.join(codes)}"
+    def _on_dtcs_resolved(self, dtcs: tuple[DTC, ...]) -> None:
+        self.dtc_label.text = format_dtc_summary(dtcs)
+        self.dtc_detail_label.text = format_dtc_detail_lines(dtcs)
+        if dtcs:
             self.dtc_label.color = _CHERRY_RED_RGBA
         else:
-            self.dtc_label.text = "✓ NO CODES STORED"
             self.dtc_label.color = _MUTED_RGBA
 
     def _on_pid_values(self, values: dict[int, float | None]) -> None:
-        parts = []
-        for pid, label, unit in DEFAULT_LIVE_PIDS:
-            value = values.get(pid)
-            parts.append(f"{label}: {value:.0f} {unit}" if value is not None else f"{label}: —")
-        self.live_label.text = "   ".join(parts)
+        self.live_label.text = format_live_summary(values)
 
     def _load_actions(self) -> None:
         actions = self._session.available_actions()
-        self._actions_by_label = {
-            f"[{action.category.value}] {action.title} ({action.support_level.value})": action
-            for action in actions
-        }
-        if not self._actions_by_label:
+        self._actions_by_key = {action.key: action for action in actions}
+        if not self._actions_by_key:
+            self.action_category_spinner.text = "all"
+            self.action_category_spinner.values = ("all",)
+            self.action_category_spinner.disabled = True
             self.action_spinner.text = "No actions available"
             self.action_spinner.values = ()
             self.action_spinner.disabled = True
             self.action_button.disabled = True
+            return
+
+        categories = action_category_labels(actions)
+        self.action_category_spinner.values = categories
+        self.action_category_spinner.text = "all"
+        self.action_category_spinner.disabled = False
+        self.action_category_spinner.bind(
+            text=lambda _spinner, value: self._on_action_category_selected(value)
+        )
+        self._apply_action_filter()
+        self.action_spinner.bind(text=lambda _spinner, value: self._on_action_selected(value))
+
+    def _apply_action_filter(self) -> None:
+        filtered_actions = self._selected_filtered_actions()
+        self._actions_by_label = {
+            action_display_label(action): action for action in filtered_actions
+        }
+        if not self._actions_by_label:
+            self.action_spinner.text = "No actions in category"
+            self.action_spinner.values = ()
+            self.action_spinner.disabled = True
+            self.action_button.disabled = True
+            self.action_description_label.text = "Description: —"
+            self.action_support_label.text = "Support: —"
+            self.action_danger_label.text = "Danger: —"
             return
 
         labels = tuple(self._actions_by_label.keys())
@@ -239,7 +317,9 @@ class CypherDDSMobileApp(App):
         self.action_spinner.disabled = False
         self.action_button.disabled = False
         self._update_action_details(self._actions_by_label[labels[0]])
-        self.action_spinner.bind(text=lambda _spinner, value: self._on_action_selected(value))
+
+    def _on_action_category_selected(self, _label: str) -> None:
+        self._apply_action_filter()
 
     def _on_action_selected(self, label: str) -> None:
         action = self._actions_by_label.get(label)
@@ -247,11 +327,27 @@ class CypherDDSMobileApp(App):
             self._update_action_details(action)
 
     def _update_action_details(self, action: DiagnosticAction) -> None:
+        self.action_description_label.text = f"Description: {action.description}"
         self.action_support_label.text = (
             f"Support: {action.support_level.value} | Mutates state: {'yes' if action.mutates_vehicle_state else 'no'}"
         )
         self.action_danger_label.text = f"Danger: {action.danger_note or '—'}"
         self.action_button.disabled = not (action.supported and action.commands)
+
+    def _confirm_clear_dtcs(self) -> None:
+        layout = BoxLayout(orientation="vertical", padding=12, spacing=8)
+        layout.add_widget(Label(text="Clearing DTCs resets readiness monitors. Continue?"))
+        buttons = BoxLayout(size_hint_y=None, height=48, spacing=8)
+        popup = Popup(title="Confirm DTC clear", content=layout, size_hint=(0.85, 0.45))
+        buttons.add_widget(Button(text="Cancel", on_press=lambda _btn: popup.dismiss()))
+        buttons.add_widget(
+            Button(
+                text="Clear",
+                on_press=lambda _btn: (popup.dismiss(), self._start_clear_dtcs()),
+            )
+        )
+        layout.add_widget(buttons)
+        popup.open()
 
     def _confirm_action(self) -> None:
         action = self._actions_by_label.get(self.action_spinner.text)

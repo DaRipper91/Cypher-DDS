@@ -15,6 +15,14 @@ from tkinter import messagebox, ttk
 
 import cypher_dds.profiles  # noqa: F401 — importing this registers all built-in vehicle profiles
 from cypher_dds.core.actions import DiagnosticAction
+from cypher_dds.core.dtc import DTC
+from cypher_dds.ui_format import (
+    action_category_labels,
+    action_display_label,
+    format_dtc_detail_lines,
+    format_dtc_summary,
+    format_live_summary,
+)
 from cypher_dds.core.vin import VINInfo
 from cypher_dds.session import DEFAULT_LIVE_PIDS, DiagnosticSession
 from cypher_dds.theme import CHERRY_RED, ROYAL_BLUE
@@ -48,10 +56,13 @@ class CypherDDSGUI(tk.Tk):
         self._dtc_var = tk.StringVar(value="✓ NO CODES STORED")
         self._live_var = tk.StringVar(value=self._live_placeholder())
         self._selected_action_key = tk.StringVar(value="")
+        self._action_category_filter = tk.StringVar(value="all")
+        self._selected_action_description = tk.StringVar(value="Description: —")
         self._selected_action_support = tk.StringVar(value="Support: —")
         self._selected_action_danger = tk.StringVar(value="Danger: —")
 
         self._action_index: dict[str, DiagnosticAction] = {}
+        self._visible_action_keys: list[str] = []
 
         self._build_layout()
 
@@ -112,8 +123,20 @@ class CypherDDSGUI(tk.Tk):
         diagnostics = ttk.LabelFrame(root, text="Diagnostics", padding=10)
         diagnostics.grid(row=2, column=0, sticky="ew", pady=(0, 8))
         diagnostics.columnconfigure(0, weight=1)
+        diagnostics.rowconfigure(1, weight=1)
         ttk.Label(diagnostics, textvariable=self._dtc_var).grid(row=0, column=0, sticky="w")
-        ttk.Label(diagnostics, textvariable=self._live_var).grid(row=1, column=0, sticky="w", pady=(8, 0))
+        dtc_columns = ("code", "description")
+        self._dtc_tree = ttk.Treeview(diagnostics, columns=dtc_columns, show="headings", height=5)
+        self._dtc_tree.heading("code", text="Code")
+        self._dtc_tree.heading("description", text="Description")
+        self._dtc_tree.column("code", width=110, anchor="w")
+        self._dtc_tree.column("description", width=560, anchor="w")
+        self._dtc_tree.grid(row=1, column=0, sticky="ew", pady=(8, 8))
+        ttk.Label(diagnostics, textvariable=self._live_var).grid(row=2, column=0, sticky="w", pady=(0, 8))
+        self._clear_dtcs_button = ttk.Button(
+            diagnostics, text="Clear DTCs", command=self._start_clear_dtcs, state="disabled"
+        )
+        self._clear_dtcs_button.grid(row=3, column=0, sticky="e")
 
         main_panes = ttk.Panedwindow(root, orient=tk.HORIZONTAL)
         main_panes.grid(row=4, column=0, sticky="nsew", pady=(0, 8))
@@ -123,18 +146,34 @@ class CypherDDSGUI(tk.Tk):
         actions.rowconfigure(1, weight=1)
         main_panes.add(actions, weight=3)
 
-        ttk.Label(actions, text="Available actions").grid(row=0, column=0, sticky="w")
+        header_row = ttk.Frame(actions)
+        header_row.grid(row=0, column=0, sticky="ew")
+        header_row.columnconfigure(1, weight=1)
+        ttk.Label(header_row, text="Available actions").grid(row=0, column=0, sticky="w")
+        ttk.Label(header_row, text="Category").grid(row=0, column=1, sticky="e", padx=(8, 4))
+        self._category_filter_combo = ttk.Combobox(
+            header_row,
+            textvariable=self._action_category_filter,
+            state="readonly",
+            values=("all",),
+            width=16,
+        )
+        self._category_filter_combo.grid(row=0, column=2, sticky="e")
+        self._category_filter_combo.bind("<<ComboboxSelected>>", self._on_action_filter_changed)
         self._actions_listbox = tk.Listbox(actions, exportselection=False, height=14)
         self._actions_listbox.grid(row=1, column=0, sticky="nsew", pady=(6, 8))
         self._actions_listbox.bind("<<ListboxSelect>>", self._on_action_selected)
-        ttk.Label(actions, textvariable=self._selected_action_support).grid(row=2, column=0, sticky="w")
+        ttk.Label(actions, textvariable=self._selected_action_description, wraplength=320).grid(
+            row=2, column=0, sticky="w"
+        )
+        ttk.Label(actions, textvariable=self._selected_action_support).grid(row=3, column=0, sticky="w", pady=(6, 0))
         ttk.Label(actions, textvariable=self._selected_action_danger, wraplength=320).grid(
-            row=3, column=0, sticky="w", pady=(6, 6)
+            row=4, column=0, sticky="w", pady=(6, 6)
         )
         self._run_action_button = ttk.Button(
             actions, text="Run action", command=self._start_run_action, state="disabled"
         )
-        self._run_action_button.grid(row=4, column=0, sticky="e")
+        self._run_action_button.grid(row=5, column=0, sticky="e")
 
         logs = ttk.LabelFrame(main_panes, text="Logs", padding=10)
         logs.columnconfigure(0, weight=1)
@@ -160,6 +199,18 @@ class CypherDDSGUI(tk.Tk):
     def _start_refresh(self) -> None:
         if self._session.connected:
             threading.Thread(target=self._refresh, daemon=True).start()
+
+    def _start_clear_dtcs(self) -> None:
+        if not self._session.connected:
+            return
+        if not messagebox.askyesno(
+            "Confirm DTC clear",
+            "Clearing DTCs resets readiness monitors. Continue?",
+            parent=self,
+        ):
+            self._append_log("Cancelled DTC clear")
+            return
+        threading.Thread(target=self._clear_dtcs, daemon=True).start()
 
     def _start_run_action(self) -> None:
         action = self._selected_action()
@@ -203,13 +254,12 @@ class CypherDDSGUI(tk.Tk):
         self.after(0, self._load_actions)
 
     def _refresh(self) -> None:
-        codes: tuple[str, ...] = ()
+        dtcs: tuple[DTC, ...] = ()
         try:
-            dtcs = self._session.read_dtcs()
-            codes = tuple(d.code for d in dtcs)
+            dtcs = tuple(self._session.read_dtcs())
         except Exception as exc:  # noqa: BLE001
             self.after(0, self._append_log, f"DTC read failed: {exc}")
-        self.after(0, self._on_dtcs_resolved, codes)
+        self.after(0, self._on_dtcs_resolved, dtcs)
 
         try:
             values = self._session.read_live_data()
@@ -217,6 +267,16 @@ class CypherDDSGUI(tk.Tk):
             self.after(0, self._append_log, f"PID read failed: {exc}")
             return
         self.after(0, self._on_pid_values, values)
+
+    def _clear_dtcs(self) -> None:
+        try:
+            self._session.clear_dtcs()
+        except Exception as exc:  # noqa: BLE001
+            self.after(0, self._append_log, f"DTC clear failed: {exc}")
+            return
+
+        self.after(0, self._append_log, "DTC clear succeeded")
+        self._refresh()
 
     def _run_action(self, action: DiagnosticAction) -> None:
         try:
@@ -238,6 +298,7 @@ class CypherDDSGUI(tk.Tk):
         self._status_var.set(f"● LIVE — {protocol}")
         self._status_label.configure(fg=ROYAL_BLUE)
         self._refresh_button.configure(state="normal")
+        self._clear_dtcs_button.configure(state="normal")
         self._append_log(f"Connected: {protocol}")
 
     def _on_vin_resolved(self, vin_info: VINInfo | None) -> None:
@@ -253,45 +314,67 @@ class CypherDDSGUI(tk.Tk):
             )
             self._append_log(f"Vehicle resolved with unknown profile: {vin_info.vin}")
 
-    def _on_dtcs_resolved(self, codes: tuple[str, ...]) -> None:
-        if codes:
-            self._dtc_var.set(f"⚠ {len(codes)} DTC(S): {', '.join(codes)}")
+    def _on_dtcs_resolved(self, dtcs: tuple[DTC, ...]) -> None:
+        self._dtc_var.set(format_dtc_summary(dtcs))
+        for item in self._dtc_tree.get_children():
+            self._dtc_tree.delete(item)
+        if dtcs:
+            for dtc in dtcs:
+                self._dtc_tree.insert(
+                    "",
+                    "end",
+                    values=(dtc.code, dtc.description or "No description available"),
+                )
         else:
-            self._dtc_var.set("✓ NO CODES STORED")
+            self._dtc_tree.insert("", "end", values=("—", "No stored DTC details."))
 
     def _on_pid_values(self, values: dict[int, float | None]) -> None:
-        parts = []
-        for pid, label, unit in DEFAULT_LIVE_PIDS:
-            value = values.get(pid)
-            parts.append(f"{label}: {value:.0f} {unit}" if value is not None else f"{label}: —")
-        self._live_var.set("   ".join(parts))
+        self._live_var.set(format_live_summary(values))
 
     def _load_actions(self) -> None:
+        actions = self._session.available_actions()
+        self._action_index = {action.key: action for action in actions}
+        self._category_filter_combo.configure(values=action_category_labels(actions))
+        self._action_category_filter.set("all")
+        self._apply_action_filter()
+
+    def _apply_action_filter(self) -> None:
+        selected_category = self._action_category_filter.get()
         self._actions_listbox.delete(0, "end")
-        self._action_index.clear()
-        for action in self._session.available_actions():
-            label = f"[{action.category.value}] {action.title} ({action.support_level.value})"
-            self._actions_listbox.insert("end", label)
-            self._action_index[action.key] = action
-        if self._action_index:
-            first_key = next(iter(self._action_index))
+        self._visible_action_keys = []
+        for key, action in self._action_index.items():
+            if selected_category != "all" and action.category.value != selected_category:
+                continue
+            self._actions_listbox.insert("end", action_display_label(action))
+            self._visible_action_keys.append(key)
+
+        if self._visible_action_keys:
+            first_key = self._visible_action_keys[0]
             self._selected_action_key.set(first_key)
             self._actions_listbox.selection_set(0)
             self._update_selected_action_details(self._action_index[first_key])
         else:
+            self._selected_action_key.set("")
+            self._selected_action_description.set("Description: —")
+            self._selected_action_support.set("Support: —")
+            self._selected_action_danger.set("Danger: —")
             self._run_action_button.configure(state="disabled")
+
+    def _on_action_filter_changed(self, _event=None) -> None:
+        self._apply_action_filter()
 
     def _on_action_selected(self, _event=None) -> None:
         selection = self._actions_listbox.curselection()
         if not selection:
             return
         index = selection[0]
-        key = list(self._action_index.keys())[index]
+        key = self._visible_action_keys[index]
         action = self._action_index[key]
         self._selected_action_key.set(key)
         self._update_selected_action_details(action)
 
     def _update_selected_action_details(self, action: DiagnosticAction) -> None:
+        self._selected_action_description.set(f"Description: {action.description}")
         self._selected_action_support.set(
             f"Support: {action.support_level.value} | Mutates state: {'yes' if action.mutates_vehicle_state else 'no'}"
         )

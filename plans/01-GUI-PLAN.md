@@ -24,8 +24,8 @@ Already implemented:
 
 Current GUI reality:
 
-- Desktop GUI: planned, not implemented
-- Android GUI: implemented only as an early Kivy shell, not production-ready
+- Desktop GUI: implemented as an MVP, not yet runtime-validated on packaged targets
+- Android GUI: implemented in code, with Android Bluetooth transport path present but not yet real-device validated
 
 ## Product direction
 
@@ -209,9 +209,9 @@ The current Android app is already the GUI plan’s base implementation.
 
 It is not production-ready because:
 
-- no Android Bluetooth backend exists
 - no real-device validation exists
-- app currently uses mock adapter only
+- Android Bluetooth path has not been verified on a physical device
+- packaged runtime behavior is still unverified
 
 ### Android scope: phase 1
 
@@ -395,4 +395,3 @@ Deliverables:
 - both GUIs can enumerate actions
 - both GUIs show support level and danger note
 - both GUIs require explicit confirmation for mutating actions
-

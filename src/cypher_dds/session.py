@@ -112,6 +112,13 @@ class DiagnosticSession:
         dtcs = DTCReader(self.elm327).read_stored()
         return [self._resolve_description(d) for d in dtcs]
 
+    def clear_dtcs(self) -> None:
+        """Clear stored emissions DTCs via Mode 04."""
+        if self.elm327 is None:
+            raise NotConnectedError("connect() must succeed before clear_dtcs()")
+
+        DTCReader(self.elm327).clear()
+
     def _resolve_description(self, dtc: DTC) -> DTC:
         if dtc.description is not None or self.profile is None:
             return dtc

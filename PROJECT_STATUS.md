@@ -80,13 +80,13 @@ presentation layer should own the other's shared branding.
 
 | Module | Purpose | Status |
 |---|---|---|
-| `app.py` | Tkinter desktop GUI wired to `DiagnosticSession`: mock/USB/Bluetooth connect, VIN resolve, DTC read, live-data refresh, action discovery, action execution with confirmation and log output | done as MVP, runtime validation of packaged artifacts pending |
+| `app.py` | Tkinter desktop GUI wired to `DiagnosticSession`: mock/USB/Bluetooth connect, VIN resolve, DTC read, structured DTC detail table, clear-DTC flow with confirmation, live-data refresh, action discovery, category filtering, action execution with confirmation and log output | done as MVP, runtime validation of packaged artifacts pending |
 
 ## Mobile (`cypher_dds.mobile`) — Android
 
 | Module | Purpose | Status |
 |---|---|---|
-| `app.py` | Kivy app wired to the same `DiagnosticSession` as the TUI/GUI: connect/VIN/DTC/live-data flow on a background thread, action discovery, action execution with confirmation, results posted to the main thread via `Clock.schedule_once` | done in code, **CI packaging confirmed green**, real-device behavior unverified |
+| `app.py` | Kivy app wired to the same `DiagnosticSession` as the TUI/GUI: connect/VIN/DTC/live-data flow on a background thread, DTC detail rendering, clear-DTC confirmation flow, action category filtering, action execution with confirmation, results posted to the main thread via `Clock.schedule_once` | done in code, **CI packaging confirmed green**, real-device behavior unverified |
 
 **Real caveats, not hedging:**
 - **Never run on a physical Android device or emulator.** This dev
@@ -179,7 +179,7 @@ headless UI test yet (see Mobile caveats).
 1. **Validate Android Bluetooth on a physical device** using
    `plans/02-ANDROID-VALIDATION.md`.
 2. **Run the packaged desktop GUI artifacts on real Linux/Windows systems**
-   to close the runtime-verification gap left by CI-only packaging.
+   using `plans/03-DESKTOP-GUI-VALIDATION.md` to close the runtime-verification gap left by CI-only packaging.
 3. Add broader OEM-specific action coverage beyond enhanced reads:
    transmission service routines, ABS bleed, EPB service mode, and coding
    only where identifiers are validated.
