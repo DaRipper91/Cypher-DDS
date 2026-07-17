@@ -10,6 +10,15 @@
 
 Live PID data. Diagnostic trouble codes. VIN decoding. No cloud, no app store, no subscription — just your laptop, a cable, and the OBD2 port under your dash.
 
+**[⬇ Download the latest release](../../releases/latest)** — pick the file for your device:
+
+| Device | File | Notes |
+|---|---|---|
+| Windows | `cypher-dds.exe` | Double-click to run. Not yet tested on a real Windows machine. |
+| Linux (Ubuntu, Fedora, Arch, Debian, openSUSE, etc.) | `cypher-dds-x86_64.AppImage` | `chmod +x` it, then run it — no install needed. |
+| Android | `cypherdds-*-arm64-v8a-debug.apk` | Early demo only — mock data, no Bluetooth yet. |
+| macOS | — | Not built yet, not currently a supported target. |
+
 </div>
 
 ---
@@ -143,7 +152,7 @@ Cypher-DDS is developed and tested as a Linux terminal app first. Three other bu
 - **Linux `.AppImage`** — [`.github/workflows/build-linux.yml`](.github/workflows/build-linux.yml) wraps the same PyInstaller TUI binary as the Windows build into a single-file AppImage on `ubuntu-22.04` (older glibc, so it runs on more distros than a `ubuntu-latest` build would), covering the major distro families — Ubuntu, Fedora, Arch, Debian, openSUSE, etc. — without maintaining separate `.deb`/`.rpm`/pacman packages. No macOS build; not a currently supported target. Build confirmed green (23.7MB artifact) — **not yet run outside CI**, not even locally in this dev environment.
 - **Android `.apk`** — [`.github/workflows/build-android.yml`](.github/workflows/build-android.yml) packages `cypher_dds.mobile`, a separate minimal Kivy app (Textual can't run inside an Android app the way it can in a real terminal), via the official `kivy/buildozer` Docker image. Build confirmed green (21.4MB debug APK) after fixing three real upstream issues along the way (a broken third-party build action, an unattended SDK license prompt, and a CPython-3.14-vs-old-Android bionic incompatibility — see `PROJECT_STATUS.md` for details). **This is still an early demo, not a finished mobile app**: CI packaging succeeding means it built, not that it runs correctly on a phone — it's never been installed on a real device or emulator, and it has no working Bluetooth backend yet (Android needs a `pyjnius`-based backend that isn't written), which matters a lot since Bluetooth is realistically the only way a phone talks to a car's OBD2 port.
 
-All three artifacts are uploaded as workflow run artifacts on every push to `main`; grab them from the [Actions tab](../../actions).
+All three artifacts are uploaded as workflow run artifacts on every push to `main` (grab those from the [Actions tab](../../actions) if you want a build off an untagged commit), but for a normal download, use the [Releases page](../../releases) — see the download table at the top of this README.
 
 ## Project layout
 
