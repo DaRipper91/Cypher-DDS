@@ -16,7 +16,7 @@ Live PID data. Diagnostic trouble codes. VIN decoding. Early bi-directional serv
 |---|---|---|
 | Windows | `cypher-dds.exe` | Double-click to run. Not yet tested on a real Windows machine. |
 | Linux (Ubuntu, Fedora, Arch, Debian, openSUSE, etc.) | `cypher-dds-x86_64.AppImage` | `chmod +x` it, then run it — no install needed. |
-| Android | `cypherdds-*-arm64-v8a-debug.apk` | Early demo only — mock data, no Bluetooth yet. |
+| Android | `cypherdds-*-arm64-v8a-debug.apk` | Early demo — Android Bluetooth path is now coded, but not validated on a physical device yet. |
 | macOS | — | Not built yet, not currently a supported target. |
 
 </div>
@@ -33,7 +33,7 @@ Plug a USB ELM327 (or ELM327-clone / STN11xx) adapter into your car's OBD2 port 
 - Pull and decode the **VIN**, using it to auto-select the right vehicle profile
 - Expose a **bi-directional action catalog** for supported makes, with explicit confirmation gates for mutating operations
 
-It works on any standard OBD2 vehicle (1996+, any protocol — J1850, ISO 9141-2, KWP2000, or CAN) out of the box, and gets smarter about specific brands through a plugin system — see [Architecture](#architecture) below. The terminal UI is the primary, most-tested interface; an Android app exists as an early demo (mock-adapter only for now — see [Other platforms](#other-platforms)).
+It works on any standard OBD2 vehicle (1996+, any protocol — J1850, ISO 9141-2, KWP2000, or CAN) out of the box, and gets smarter about specific brands through a plugin system — see [Architecture](#architecture) below. The terminal UI is the primary, most-tested interface; a desktop GUI now exists as a Tkinter MVP, and the Android app is still an early demo pending real-device validation.
 
 The current bi-directional layer is a framework, not a finished OEM write tool. Today it can execute a small seed set of generic service actions and declare planned active-test/coding/service targets per make. Real hidden-feature toggles, actuator tests, and module programming still require ECU-specific implementations.
 
@@ -49,6 +49,8 @@ Four layers, deliberately kept apart:
 ┌──────────────────────────────┐  ┌──────────────────────────────┐
 │  cypher_dds.tui               │  │  cypher_dds.mobile            │
 │  Textual dashboard (desktop)  │  │  Kivy app (Android)           │
+│  Tkinter GUI also drives the  │  │  same shared session layer    │
+│  same shared session layer    │  │                               │
 └───────────────┬──────────────┘  └───────────────┬──────────────┘
                  │        both drive the same session layer        │
                  └───────────────────────┬──────────────────────---┘
@@ -79,7 +81,7 @@ Four layers, deliberately kept apart:
 └───────────────────────────────────────────────────────────-┘
 ```
 
-**Core never imports from profiles or a presentation layer.** A profile can be selected manually or picked automatically from the decoded VIN's WMI. Both the TUI and the mobile app talk only to `cypher_dds.session`'s public interface — neither re-implements connect/VIN/DTC/PID logic, and a future desktop GUI would slot in the exact same way, no protocol logic duplicated a third time.
+**Core never imports from profiles or a presentation layer.** A profile can be selected manually or picked automatically from the decoded VIN's WMI. The TUI, Tkinter desktop GUI, and mobile app all talk only to `cypher_dds.session`'s public interface — no protocol logic duplicated across UI layers.
 
 ## Supported vehicles
 
@@ -116,6 +118,10 @@ Implemented across all current makes:
   - clear emissions DTCs
   - tester present
   - enter extended diagnostic session
+- first OEM-specific enhanced-data actions:
+  - GM transmission fluid temperature read (`221940`)
+  - Ford transmission fluid temperature read (`221E1C`)
+  - Ford engine oil temperature read (`221310`)
 
 Declared but not yet executable across all current makes:
 
@@ -182,9 +188,9 @@ cypher-dds --bluetooth AA:BB:CC:DD:EE:FF
 
 Cypher-DDS is developed and tested as a Linux terminal app first. Three other build targets exist, all produced by GitHub Actions rather than locally (PyInstaller has to run on the target OS, and Buildozer needs a full Android SDK/NDK toolchain — neither is available in this project's dev environment). All three workflows have been pushed and watched through to a **confirmed green CI build**, not just written and assumed to work:
 
-- **Windows `.exe`** — [`.github/workflows/build-windows.yml`](.github/workflows/build-windows.yml) packages the exact same Textual TUI with PyInstaller on a `windows-latest` runner. No separate Windows codebase; it's the identical app. Build confirmed green (14.7MB artifact) — **not yet launched on a real Windows machine**.
-- **Linux `.AppImage`** — [`.github/workflows/build-linux.yml`](.github/workflows/build-linux.yml) wraps the same PyInstaller TUI binary as the Windows build into a single-file AppImage on `ubuntu-22.04` (older glibc, so it runs on more distros than a `ubuntu-latest` build would), covering the major distro families — Ubuntu, Fedora, Arch, Debian, openSUSE, etc. — without maintaining separate `.deb`/`.rpm`/pacman packages. No macOS build; not a currently supported target. Build confirmed green (23.7MB artifact); the release download link and file integrity are also confirmed — a fresh anonymous download from the Releases page matches the CI-reported size byte-for-byte, and the embedded squashfs image extracts cleanly with the expected contents (icon, desktop entry, `cypher-dds` binary). **Not yet actually launched**, though: this dev environment is aarch64, so running the x86_64 binary needs FEX emulation, which hit an unrelated environment gap (no `muvm` server) — that's the real remaining verification step.
-- **Android `.apk`** — [`.github/workflows/build-android.yml`](.github/workflows/build-android.yml) packages `cypher_dds.mobile`, a separate minimal Kivy app (Textual can't run inside an Android app the way it can in a real terminal), via the official `kivy/buildozer` Docker image. Build confirmed green (21.4MB debug APK) after fixing three real upstream issues along the way (a broken third-party build action, an unattended SDK license prompt, and a CPython-3.14-vs-old-Android bionic incompatibility — see `PROJECT_STATUS.md` for details). **This is still an early demo, not a finished mobile app**: CI packaging succeeding means it built, not that it runs correctly on a phone — it's never been installed on a real device or emulator, and it has no working Bluetooth backend yet (Android needs a `pyjnius`-based backend that isn't written), which matters a lot since Bluetooth is realistically the only way a phone talks to a car's OBD2 port.
+- **Windows `.exe`** — [`.github/workflows/build-windows.yml`](.github/workflows/build-windows.yml) now builds both the Textual TUI and the Tkinter desktop GUI with PyInstaller on a `windows-latest` runner. Build artifacts exist, but **neither Windows binary has been launched on a real Windows machine yet**.
+- **Linux `.AppImage`** — [`.github/workflows/build-linux.yml`](.github/workflows/build-linux.yml) now builds AppImages for both the TUI and the Tkinter desktop GUI on `ubuntu-22.04`. No macOS build; not a currently supported target. Runtime validation of the GUI AppImage is still pending on a real desktop environment.
+- **Android `.apk`** — [`.github/workflows/build-android.yml`](.github/workflows/build-android.yml) packages `cypher_dds.mobile`, the Kivy Android app, via the official `kivy/buildozer` Docker image. The app now has an Android Bluetooth transport path in code (`pyjnius` → `android.bluetooth.BluetoothSocket`), but **this is still not real-device validated**: CI packaging succeeding means it built, not that it runs correctly on a phone or talks successfully to a real adapter.
 
 All three artifacts are uploaded as workflow run artifacts on every push to `main` (grab those from the [Actions tab](../../actions) if you want a build off an untagged commit), but for a normal download, use the [Releases page](../../releases) — see the download table at the top of this README.
 
@@ -203,6 +209,7 @@ Cypher-DDS/
 │   ├── session.py           # framework-agnostic orchestration both UIs drive
 │   ├── theme.py             # shared brand accent colors (Royal Blue / Cherry Red)
 │   ├── profiles/            # brand plugins + ECU-family catalogs: GM, Ford, Dodge/Chrysler, Toyota/Lexus, Honda/Acura, Kia
+│   ├── gui/                 # Tkinter desktop GUI
 │   ├── tui/                 # Textual dashboard (desktop)
 │   └── mobile/              # Kivy app (Android)
 └── tests/                   # decode-logic + session + UI tests — no hardware needed
@@ -233,7 +240,7 @@ Profiles can also expose bi-directional action catalogs and ECU-family metadata 
 
 ## Roadmap
 
-Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: the whole core read-oriented layer (USB + Bluetooth serial transport, ELM327 command framing, Mode 01/03/04/09 decode), DTC tables for GM/Ford/Dodge-Chrysler/Toyota-Lexus/Honda-Acura, Kia profile and VIN/WMI routing, a small verified set of GM/Ford enhanced PIDs, a NHTSA-derived `WMI_TABLE`, the Textual dashboard wired end to end to real core state via `cypher_dds.session`, and the first cross-make bi-directional action framework with ECU-family catalogs. Next: close the TUI verification gap, add the first real OEM-specific active-test/coding/service pack, build a stronger UDS/transport layer, add TUI action UX, and implement a real Android Bluetooth backend.
+Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: the whole core read-oriented layer (USB + Bluetooth serial transport, ELM327 command framing, Mode 01/03/04/09 decode), DTC tables for GM/Ford/Dodge-Chrysler/Toyota-Lexus/Honda-Acura, Kia profile and VIN/WMI routing, a small verified set of GM/Ford enhanced PIDs, a NHTSA-derived `WMI_TABLE`, the Textual dashboard wired end to end to real core state via `cypher_dds.session`, a Tkinter desktop GUI MVP, an Android Bluetooth transport path in code, and the first cross-make bi-directional action framework with the first OEM-specific enhanced-data action pack. Next: validate the desktop GUI artifacts on real machines, validate Android Bluetooth on a physical device, build a stronger UDS/transport layer, and expand OEM-specific action coverage beyond enhanced reads.
 
 ## Safety
 

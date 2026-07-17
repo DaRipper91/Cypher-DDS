@@ -25,6 +25,13 @@ def test_all_current_profiles_expose_action_catalogs():
         assert f"{key}.body_control_coding" in actions
         assert f"{key}.module_programming" in actions
 
+    gm_actions = {action.key: action for action in get_profile("gm").supported_actions()}
+    assert "gm.read_trans_fluid_temp" in gm_actions
+
+    ford_actions = {action.key: action for action in get_profile("ford").supported_actions()}
+    assert "ford.read_trans_fluid_temp" in ford_actions
+    assert "ford.read_engine_oil_temp" in ford_actions
+
 
 def test_action_catalog_exposes_service_and_future_write_categories():
     profile = get_profile("kia")
@@ -67,6 +74,24 @@ def test_run_action_executes_mock_supported_service_commands():
 
     cleared = session.run_action("gm.clear_emissions_dtcs", confirm_write=True)
     assert cleared.responses == ("44",)
+
+    gm_enhanced = session.run_action("gm.read_trans_fluid_temp")
+    assert gm_enhanced.responses == ("62 19 40 5A",)
+
+
+def test_run_action_executes_ford_oem_action_pack_against_ford_mock():
+    session = DiagnosticSession()
+    session.connect(mock_scenario="ford")
+    vin_info = session.resolve_vehicle()
+
+    assert vin_info is not None
+    assert vin_info.manufacturer == "ford"
+
+    trans_temp = session.run_action("ford.read_trans_fluid_temp")
+    assert trans_temp.responses == ("62 1E 1C 13 88",)
+
+    oil_temp = session.run_action("ford.read_engine_oil_temp")
+    assert oil_temp.responses == ("62 13 10 13 88",)
 
 
 def test_run_action_rejects_unknown_or_placeholder_actions():

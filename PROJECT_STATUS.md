@@ -1,44 +1,49 @@
 # Cypher-DDS — Project Status
 
 The core layer (serial, ELM327, PIDs, DTC, VIN) is fully implemented and
-tested against a mock adapter, all five v1 brands carry real DTC data, and
-the connect/VIN/DTC/PID orchestration logic lives in one framework-agnostic
-place (`cypher_dds.session`) that both the TUI and the new mobile app drive.
-Remaining work is enhanced PIDs, B/C/U codes, real-hardware validation, and
-UI polish across both presentation layers. Update this file as pieces land.
+tested against a mock adapter, six brands are now registered, and the
+connect/VIN/DTC/PID/action orchestration logic lives in one
+framework-agnostic place (`cypher_dds.session`) that the TUI, desktop GUI,
+and mobile app all drive. Remaining work is broader OEM-specific action
+coverage, stronger transport/session handling for deeper OEM workflows,
+real-hardware validation, and UI polish across all presentation layers.
+Update this file as pieces land.
 
 ## Core (`cypher_dds.core`) — brand-agnostic
 
 | Module | Purpose | Status |
 |---|---|---|
-| `serial_conn.py` | Port discovery (`/dev/ttyUSB*`/`/dev/ttyACM*`), USB connect/disconnect, byte-level read-until-prompt framing, `connect_bluetooth()` | done |
+| `serial_conn.py` | Port discovery (`/dev/ttyUSB*`/`/dev/ttyACM*`), USB connect/disconnect, byte-level read-until-prompt framing, `connect_bluetooth()` routing to desktop Linux RFCOMM or Android Bluetooth socket transport as appropriate | done |
 | `bluetooth_adapter.py` | `BluetoothSerialAdapter` — RFCOMM/SPP transport via stdlib `socket.AF_BLUETOOTH`. **Linux-only** (that socket family isn't exposed by CPython on macOS/Windows); raises a clear `RuntimeError` there instead of failing obscurely. No SDP auto-discovery — connects to an already-OS-paired device by MAC. Untested against real Bluetooth ELM327 hardware (mocked at the socket layer in tests; no BT OBD2 adapter available in this dev environment — see `PROJECT_STATUS.md` history for what *was* checked). | done (socket-layer tests only) |
+| `android_bluetooth_adapter.py` | `AndroidBluetoothSerialAdapter` — pyjnius bridge to `android.bluetooth.BluetoothSocket`, exposing the same `SerialLike` surface as the desktop transports | done in code, **not real-device validated** |
 | `elm327.py` | AT init sequence, command/response framing, error detection, `ATDPN` protocol name lookup | done |
 | `pids.py` | Mode 01 PID table + decode math (RPM, speed, coolant temp, intake temp, MAF, throttle position, fuel level); `read_pid()` issues a request through ELM327 and returns the decoded value | done |
 | `dtc.py` | Mode 03/04 DTC read/clear, SAE J2012 byte decode, generic P0xxx table (~40 codes) | done |
-| `vin.py` | Mode 09 VIN retrieval, WMI → manufacturer decode | done — `WMI_TABLE` has 353 entries across all 5 brands, sourced from NHTSA's public vPIC database |
-| `mock_adapter.py` | `MockELM327Adapter` — canned AT/PID/DTC/VIN responses (`default`, `no_adapter`, `malformed_vin` scenarios) for dev without hardware | done |
+| `vin.py` | Mode 09 VIN retrieval, WMI → manufacturer decode | done — `WMI_TABLE` now includes Kia routing in addition to the original makes |
+| `mock_adapter.py` | `MockELM327Adapter` — canned AT/PID/DTC/VIN/action responses (`default`, `ford`, `no_adapter`, `malformed_vin` scenarios) for dev without hardware | done |
+| `actions.py` | Cross-make bi-directional action model: action manifests, support levels, confirmation gates, response validation, and execution helper | done |
 
 ## Session layer (`cypher_dds.session`)
 
 `DiagnosticSession` owns connect (USB, Bluetooth, or mock) + VIN/profile
-resolution + DTC reads (with brand-fallback descriptions) + live PID reads,
-as plain framework-agnostic Python. Both `cypher_dds.tui` and
-`cypher_dds.mobile` drive the exact same class rather than each
-re-implementing this orchestration — extracted specifically so a second
-(and now third) presentation layer wouldn't duplicate it. Fully unit
-tested (`test_session.py`) independent of either UI framework. `done`
+resolution + DTC reads (with brand-fallback descriptions) + live PID reads
++ action discovery/execution, as plain framework-agnostic Python. The TUI,
+Tkinter desktop GUI, and Kivy mobile app all drive the exact same class.
+Fully unit tested (`test_session.py`) independent of either UI framework.
+`done`
 
 ## Profiles (`cypher_dds.profiles`) — brand-specific
 
 | Profile | Coverage target | Status |
 |---|---|---|
-| `base.py` | `VehicleProfile` interface + registry | stub |
-| `gm.py` | GM, 1996+ (J1850 VPW pre-2008, CAN 2008+) | DTC_TABLE populated (402 P1xxx codes); 1 enhanced PID (trans fluid temp) |
-| `ford.py` | Ford, 1996+ (J1850 PWM pre-2008, CAN 2008+). **Only the standard OBD2 bus is reachable via a basic ELM327 — MS-CAN (body/comfort systems) is out of scope for v1.** | DTC_TABLE populated (410 P1xxx codes, incl. Power Stroke diesel); 2 enhanced PIDs (trans fluid temp, engine oil temp) |
+| `base.py` | `VehicleProfile` interface + registry + default action catalog + ECU-family accessors | done |
+| `gm.py` | GM, 1996+ (J1850 VPW pre-2008, CAN 2008+) | DTC_TABLE populated (402 P1xxx codes); 1 enhanced PID; 1 OEM-specific implemented enhanced-data action (`gm.read_trans_fluid_temp`) |
+| `ford.py` | Ford, 1996+ (J1850 PWM pre-2008, CAN 2008+). **Only the standard OBD2 bus is reachable via a basic ELM327 — MS-CAN (body/comfort systems) is out of scope for v1.** | DTC_TABLE populated (410 P1xxx codes, incl. Power Stroke diesel); 2 enhanced PIDs; 2 OEM-specific implemented enhanced-data actions (`ford.read_trans_fluid_temp`, `ford.read_engine_oil_temp`) |
 | `dodge_chrysler.py` | Dodge/Chrysler, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+). The proprietary SCI/CCD body bus is out of scope for v1 (same category as Ford's MS-CAN). | DTC_TABLE populated (97 P1xxx codes, incl. diesel/CNG variants); enhanced PIDs still stub |
 | `toyota_lexus.py` | Toyota/Lexus, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+) | DTC_TABLE populated (44 P1xxx codes); enhanced PIDs still stub |
 | `honda_acura.py` | Honda/Acura, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+) | DTC_TABLE populated (94 P1xxx codes); enhanced PIDs still stub |
+| `kia.py` | Kia, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+) | profile registration + VIN/WMI routing done; Kia-specific DTC/enhanced PID/action depth pending |
+| `catalog.py` | ECU-family planning/support metadata per make | done |
 
 Protocol selection is fully handled by the ELM327's auto-detect (`ATSP0`) —
 `cypher_dds.core` already decodes Mode 01/03/09 identically regardless of
@@ -71,11 +76,17 @@ focus, Cherry Red = DTC alert) moved out of `cypher_dds.tui` to the top
 level, since `cypher_dds.mobile` needs the same constants and neither
 presentation layer should own the other's shared branding.
 
-## Mobile (`cypher_dds.mobile`) — Android, new
+## Desktop GUI (`cypher_dds.gui`) — Tkinter
 
 | Module | Purpose | Status |
 |---|---|---|
-| `app.py` | Kivy app wired to the same `DiagnosticSession` as the TUI: connect/VIN/DTC/live-data flow on a background thread, results posted to the main thread via `Clock.schedule_once`. Mock adapter only — see caveats below. | done, **CI packaging confirmed green**, unverified beyond that |
+| `app.py` | Tkinter desktop GUI wired to `DiagnosticSession`: mock/USB/Bluetooth connect, VIN resolve, DTC read, live-data refresh, action discovery, action execution with confirmation and log output | done as MVP, runtime validation of packaged artifacts pending |
+
+## Mobile (`cypher_dds.mobile`) — Android
+
+| Module | Purpose | Status |
+|---|---|---|
+| `app.py` | Kivy app wired to the same `DiagnosticSession` as the TUI/GUI: connect/VIN/DTC/live-data flow on a background thread, action discovery, action execution with confirmation, results posted to the main thread via `Clock.schedule_once` | done in code, **CI packaging confirmed green**, real-device behavior unverified |
 
 **Real caveats, not hedging:**
 - **Never run on a physical Android device or emulator.** This dev
@@ -84,15 +95,12 @@ presentation layer should own the other's shared branding.
   app into a real 21.4MB APK via Buildozer on a GitHub Actions runner
   (confirmed by pushing and watching the run — not assumed). A green CI
   build means "it built," not "it runs correctly on a phone."
-- **Android Bluetooth is not implemented.** `BluetoothSerialAdapter` uses
-  desktop Linux's `socket.AF_BLUETOOTH` (BlueZ), which Android doesn't
-  expose to Python the same way. A real backend needs a `pyjnius` bridge to
-  `android.bluetooth.BluetoothSocket` — flagged as a TODO, since it can't
-  be verified without a physical device. Since most people don't run a USB
-  ELM327 off an Android phone (few support USB-OTG to a car's OBD2 port
-  practically), Bluetooth is the *only* connectivity path that will matter
-  for a real Android release — this is the actual blocker before the APK
-  is more than a demo shell.
+- **Android Bluetooth now exists in code, but is unverified.** The new
+  `AndroidBluetoothSerialAdapter` uses `pyjnius` to call
+  `android.bluetooth.BluetoothSocket`, and `SerialConnection.connect_bluetooth()`
+  routes to it on Android. That closes the code-path gap, but **not** the
+  real-device validation gap — a physical device is still required before
+  the APK can be treated as more than a demo build.
 - Local headless testing of the Kivy widget tree hit an environment limit
   in this sandbox (no SDL2 window provider on this aarch64 box, only
   `x11`/`pygame` providers attempted and neither available) — confirmed
@@ -103,14 +111,17 @@ presentation layer should own the other's shared branding.
 
 | Target | Tooling | Workflow | Status |
 |---|---|---|---|
-| Windows `.exe` | PyInstaller (`cypher-dds.spec`, repo root) — bundles the *existing* TUI app as-is, no new UI code | `.github/workflows/build-windows.yml`, `windows-latest` runner | **CI build confirmed green** (1m17s) — `dist/cypher-dds.exe`, 14.7MB artifact |
+| Windows `.exe` | PyInstaller (`cypher-dds.spec` + `cypher-dds-gui.spec`) — builds both the Textual TUI and the Tkinter GUI | `.github/workflows/build-windows.yml`, `windows-latest` runner | configured; runtime validation on real Windows still pending |
 | Android `.apk` | Buildozer (`buildozer.spec` + `main.py`, repo root) — packages the new Kivy mobile app; runs the official `ghcr.io/kivy/buildozer` Docker image directly, not the `ArtemSBulgakov/buildozer-action` GitHub Action (see below) | `.github/workflows/build-android.yml`, `ubuntu-latest` runner | **CI build confirmed green** (13m53s cold), 21.4MB debug APK artifact |
-| Linux `.AppImage` | PyInstaller (same `cypher-dds.spec` as Windows, same TUI binary) wrapped into a single-file AppImage via `appimagetool`, so it runs unmodified on the major distro families (Ubuntu, Fedora, Arch, Debian, openSUSE, …) with no `.deb`/`.rpm`/pacman packages to maintain separately | `.github/workflows/build-linux.yml`, `ubuntu-22.04` runner (deliberately not `ubuntu-latest` — older glibc runs on more distros) | **CI build confirmed green** (49s) — `dist/cypher-dds-x86_64.AppImage`, 23.7MB artifact |
+| Linux `.AppImage` | PyInstaller (`cypher-dds.spec` + `cypher-dds-gui.spec`) wrapped into AppImages for both the TUI and GUI via `appimagetool` | `.github/workflows/build-linux.yml`, `ubuntu-22.04` runner | configured; runtime validation of GUI AppImage still pending |
 
-All three were actually pushed and watched through CI to green, not just
-written and assumed to work. The Windows/Android builds hit three real
-failures along the way, all external/upstream, not app bugs; the Linux
-AppImage build went green on the first push:
+The original TUI Windows build, Android APK build, and Linux TUI AppImage
+path were actually pushed and watched through CI to green, not just written
+and assumed to work. The newly added GUI packaging paths are configured in
+those same workflows but still need a real CI run after this change to
+confirm artifact production. The earlier Windows/Android build work hit
+three real failures along the way, all external/upstream, not app bugs; the
+Linux AppImage build went green on the first push:
 1. `ArtemSBulgakov/buildozer-action`'s own Dockerfile layers extra apt
    packages onto the `kivy/buildozer` base image and pulls in
    `ppa:openjdk-r/ppa`, which doesn't have a Release file for that image's
@@ -142,7 +153,7 @@ physical device.
 
 ## Tests (`tests/`)
 
-65 tests, 0 skipped. `test_pids.py`, `test_elm327.py`, `test_serial_conn.py`,
+79 tests, 0 skipped. `test_pids.py`, `test_elm327.py`, `test_serial_conn.py`,
 `test_dtc.py`, `test_vin.py`, and `test_bluetooth_adapter.py` all exercise
 real logic against `MockELM327Adapter` (or a mocked socket layer for
 Bluetooth): PID decode math (including `read_pid()`), the full ELM327
@@ -152,27 +163,28 @@ letter-prefix cases, padding, error paths), `DTCReader`, WMI decoding
 exclusion), `request_vin` (including the malformed-VIN length-validation
 path), and the Bluetooth RFCOMM socket wiring (address/channel routing,
 timeout handling, the unsupported-platform error path).
-`test_profiles.py` locks in real P1xxx lookups for all five brands plus the
-GM/Ford enhanced-PID entries. `test_session.py` exercises the full
+`test_profiles.py` locks in real P1xxx lookups for all six registered
+profiles plus the GM/Ford enhanced-PID entries. `test_session.py` exercises the full
 connect → VIN → DTC → live-data flow as plain Python, independent of
 either UI framework. `test_tui_app.py` runs Textual's headless harness
-end to end (successful connect + resolution, manual refresh, two
-connection-failure paths), awaiting the worker thread via
-`app.workers.wait_for_complete()` before asserting UI state. The Kivy
-mobile app has no equivalent headless UI test yet (see Mobile caveats).
+at the widget/app-dispatch level rather than through Textual's flaky
+threaded headless worker path under this Python/Textual combination.
+`test_actions.py` and `test_serial_conn_android.py` now cover the
+bi-directional action framework, OEM-specific enhanced-read actions, and
+Android Bluetooth routing. The Kivy mobile app still has no equivalent
+headless UI test yet (see Mobile caveats).
 
 ## Next steps (not yet started)
 
-1. **Real Android Bluetooth backend** (`pyjnius` → `android.bluetooth.BluetoothSocket`)
-   — the actual blocker for the Android app being more than a mock-adapter demo.
-2. **Install and run both packaged artifacts on real hardware** — the
-   `.exe` on an actual Windows machine, the `.apk` on a physical
-   Android device. Nothing beyond CI packaging has been verified for either.
-3. Add enhanced PIDs and B/C/U-series codes for all five brands where
-   documented; keep expanding GM/Ford's existing enhanced-PID entries as
-   more are independently confirmed.
-4. See "Planned features" below for TUI/GUI feature work once the above
-   is solid.
+1. **Validate Android Bluetooth on a physical device** using
+   `plans/02-ANDROID-VALIDATION.md`.
+2. **Run the packaged desktop GUI artifacts on real Linux/Windows systems**
+   to close the runtime-verification gap left by CI-only packaging.
+3. Add broader OEM-specific action coverage beyond enhanced reads:
+   transmission service routines, ABS bleed, EPB service mode, and coding
+   only where identifiers are validated.
+4. Build a stronger UDS/transport layer before any serious programming or
+   security-access work.
 
 ## Planned features (TUI + mobile/GUI)
 

@@ -9,6 +9,7 @@ community. Tables below are seeds; expand as documentation is gathered.
 
 from __future__ import annotations
 
+from cypher_dds.core.actions import ActionCategory, DiagnosticAction, SupportLevel
 from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profile
 
 # GM manufacturer-specific (P1xxx) DTC definitions, sourced from public
@@ -462,6 +463,22 @@ class GMProfile(VehicleProfile):
 
     def enhanced_pids(self) -> tuple[EnhancedPID, ...]:
         return ENHANCED_PIDS
+
+    def supported_actions(self) -> tuple[DiagnosticAction, ...]:
+        return super().supported_actions() + (
+            DiagnosticAction(
+                key="gm.read_trans_fluid_temp",
+                title="Read transmission fluid temperature",
+                description=(
+                    "Read GM PCM/TCM standard-bus enhanced data for transmission fluid temperature "
+                    "using Mode 22 PID 1940."
+                ),
+                category=ActionCategory.SERVICE,
+                commands=("221940",),
+                expected_prefixes=("621940",),
+                support_level=SupportLevel.IMPLEMENTED,
+            ),
+        )
 
 
 register_profile(GMProfile())

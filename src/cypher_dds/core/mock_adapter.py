@@ -28,8 +28,27 @@ _SCENARIOS: dict[str, dict[str, str]] = {
         "04": "44",  # clear DTCs: positive response, no data
         "1003": "50 03",  # UDS: enter extended diagnostic session
         "3E00": "7E 00",  # UDS: tester present
+        "221940": "62 19 40 5A",  # GM trans fluid temp
         # VIN "1G1ZE5ST9JF123456" (WMI 1G1 -> gm), as Mode 09 PID 02 ASCII bytes
         "0902": "49 02 01 31 47 31 5A 45 35 53 54 39 4A 46 31 32 33 34 35 36",
+    },
+    "ford": {
+        "ATZ": "ELM327 v1.5",
+        "ATE0": "OK",
+        "ATL0": "OK",
+        "ATH0": "OK",
+        "ATSP0": "OK",
+        "ATDPN": "A6",
+        "010C": "41 0C 18 A0",  # RPM = 1576
+        "0105": "41 05 72",  # coolant temp = 74 C
+        "010D": "41 0D 3C",  # speed = 60 km/h
+        "03": "43 01 00",  # one stored DTC: P1000
+        "04": "44",
+        "1003": "50 03",
+        "3E00": "7E 00",
+        "221E1C": "62 1E 1C 13 88",  # Ford trans fluid temp
+        "221310": "62 13 10 13 88",  # Ford engine oil temp
+        "0902": "49 02 01 31 46 41 50 38 50 43 55 35 48 47 31 32 33 34 35 36",
     },
     "no_adapter": {},  # every command times out — simulates nothing connected
     "malformed_vin": {

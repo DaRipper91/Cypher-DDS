@@ -28,6 +28,7 @@ mobile = [
 
 [project.scripts]
 cypher-dds = "cypher_dds.tui.app:main"
+cypher-dds-gui = "cypher_dds.gui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

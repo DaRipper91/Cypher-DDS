@@ -21,7 +21,8 @@ version = 0.1.0
 
 # pyserial is imported at module level by cypher_dds.core.serial_conn even
 # when only the mock adapter is in use, so it has to be bundled too.
-requirements = python3,kivy,pyserial
+# pyjnius is required for the Android Bluetooth transport bridge.
+requirements = python3,kivy,pyserial,pyjnius
 
 orientation = portrait
 fullscreen = 0

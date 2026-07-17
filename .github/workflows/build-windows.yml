@@ -26,11 +26,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[build]"
 
-      - name: Build executable
+      - name: Build TUI executable
         run: pyinstaller cypher-dds.spec
 
-      - name: Upload artifact
+      - name: Build GUI executable
+        run: pyinstaller cypher-dds-gui.spec
+
+      - name: Upload TUI artifact
         uses: actions/upload-artifact@v4
         with:
           name: cypher-dds-windows
           path: dist/cypher-dds.exe
+
+      - name: Upload GUI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypher-dds-gui-windows
+          path: dist/cypher-dds-gui.exe

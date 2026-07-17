@@ -16,6 +16,7 @@ MS-CAN-only parameter first.
 
 from __future__ import annotations
 
+from cypher_dds.core.actions import ActionCategory, DiagnosticAction, SupportLevel
 from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profile
 
 # Ford manufacturer-specific (P1xxx) DTC definitions, sourced from public
@@ -487,6 +488,33 @@ class FordProfile(VehicleProfile):
 
     def enhanced_pids(self) -> tuple[EnhancedPID, ...]:
         return ENHANCED_PIDS
+
+    def supported_actions(self) -> tuple[DiagnosticAction, ...]:
+        return super().supported_actions() + (
+            DiagnosticAction(
+                key="ford.read_trans_fluid_temp",
+                title="Read transmission fluid temperature",
+                description=(
+                    "Read Ford PCM/TCM standard-bus enhanced data for transmission fluid "
+                    "temperature using Mode 22 PID 1E1C."
+                ),
+                category=ActionCategory.SERVICE,
+                commands=("221E1C",),
+                expected_prefixes=("621E1C",),
+                support_level=SupportLevel.IMPLEMENTED,
+            ),
+            DiagnosticAction(
+                key="ford.read_engine_oil_temp",
+                title="Read engine oil temperature",
+                description=(
+                    "Read Ford PCM enhanced data for engine oil temperature using Mode 22 PID 1310."
+                ),
+                category=ActionCategory.SERVICE,
+                commands=("221310",),
+                expected_prefixes=("621310",),
+                support_level=SupportLevel.IMPLEMENTED,
+            ),
+        )
 
 
 register_profile(FordProfile())

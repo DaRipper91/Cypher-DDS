@@ -6,13 +6,10 @@ name: Build Linux AppImage
 # older distros. 22.04 is the oldest Ubuntu GitHub still offers as a hosted
 # runner, so it's the widest-compatibility choice available here.
 #
-# Ships one self-contained cypher-dds-x86_64.AppImage that runs unmodified
-# across Ubuntu, Fedora, Arch, Debian, openSUSE, etc. — deliberately not
-# per-distro .deb/.rpm/pacman packages, which would mean separate packaging
-# metadata and maintainer scripts to write and keep working for each distro
-# family. Builds the TUI (src/cypher_dds/tui/app.py via cypher-dds.spec),
-# same entry point build-windows.yml packages — add a second job here for
-# cypher_dds.gui once that module exists (see PROJECT_STATUS.md).
+# Ships self-contained AppImages for both the TUI and desktop GUI, rather
+# than per-distro .deb/.rpm/pacman packages, which would mean separate
+# packaging metadata and maintainer scripts to maintain for each distro
+# family.
 
 on:
   push:
@@ -36,14 +33,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[build]"
 
-      - name: Build with PyInstaller
+      - name: Build TUI with PyInstaller
         run: pyinstaller cypher-dds.spec
 
-      - name: Assemble AppDir
+      - name: Build GUI with PyInstaller
+        run: pyinstaller cypher-dds-gui.spec
+
+      - name: Assemble TUI AppDir
         run: |
-          mkdir -p AppDir/usr/bin
-          cp dist/cypher-dds AppDir/usr/bin/cypher-dds
-          cat > AppDir/cypher-dds.desktop <<'EOF'
+          mkdir -p AppDir-TUI/usr/bin
+          cp dist/cypher-dds AppDir-TUI/usr/bin/cypher-dds
+          cat > AppDir-TUI/cypher-dds.desktop <<'EOF'
           [Desktop Entry]
           Type=Application
           Name=Cypher-DDS
@@ -56,20 +56,43 @@ jobs:
           # Solid Royal Blue square (cypher_dds.theme.ROYAL_BLUE) — a real
           # icon design is future work, this just satisfies appimagetool's
           # requirement for an <appname>.png at the AppDir root.
-          convert -size 256x256 xc:'#4169E1' AppDir/cypher-dds.png
+          convert -size 256x256 xc:'#4169E1' AppDir-TUI/cypher-dds.png
+
+      - name: Assemble GUI AppDir
+        run: |
+          mkdir -p AppDir-GUI/usr/bin
+          cp dist/cypher-dds-gui AppDir-GUI/usr/bin/cypher-dds-gui
+          cat > AppDir-GUI/cypher-dds-gui.desktop <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Cypher-DDS GUI
+          Comment=OBD2 desktop GUI for talking to vehicles over USB/Bluetooth ELM327 adapters
+          Exec=cypher-dds-gui
+          Icon=cypher-dds-gui
+          Categories=Utility;
+          Terminal=false
+          EOF
+          convert -size 256x256 xc:'#DC143C' AppDir-GUI/cypher-dds-gui.png
 
       - name: Download appimagetool
         run: |
           curl -L -o appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
           chmod +x appimagetool
 
-      - name: Build AppImage
+      - name: Build AppImages
         run: |
           mkdir -p dist
-          ./appimagetool --appimage-extract-and-run AppDir dist/cypher-dds-x86_64.AppImage
+          ./appimagetool --appimage-extract-and-run AppDir-TUI dist/cypher-dds-x86_64.AppImage
+          ./appimagetool --appimage-extract-and-run AppDir-GUI dist/cypher-dds-gui-x86_64.AppImage
 
-      - name: Upload artifact
+      - name: Upload TUI artifact
         uses: actions/upload-artifact@v4
         with:
           name: cypher-dds-linux
           path: dist/cypher-dds-x86_64.AppImage
+
+      - name: Upload GUI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypher-dds-gui-linux
+          path: dist/cypher-dds-gui-x86_64.AppImage

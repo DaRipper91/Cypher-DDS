@@ -9,6 +9,7 @@ above this layer (elm327.py and up) should depend on ``SerialLike``, never on
 from __future__ import annotations
 
 import glob
+import sys
 from typing import Protocol, runtime_checkable
 
 import serial as pyserial
@@ -75,6 +76,16 @@ class SerialConnection:
         Bluetooth settings — this doesn't do pairing or device discovery).
         Linux-only; see bluetooth_adapter.py for why.
         """
+        if sys.platform == "android":
+            from cypher_dds.core.android_bluetooth_adapter import AndroidBluetoothSerialAdapter
+
+            self._transport = AndroidBluetoothSerialAdapter(
+                address,
+                channel if channel is not None else 1,
+                timeout=DEFAULT_TIMEOUT,
+            )
+            return
+
         from cypher_dds.core.bluetooth_adapter import (
             DEFAULT_RFCOMM_CHANNEL,
             BluetoothSerialAdapter,
