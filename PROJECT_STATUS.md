@@ -105,11 +105,12 @@ presentation layer should own the other's shared branding.
 |---|---|---|---|
 | Windows `.exe` | PyInstaller (`cypher-dds.spec`, repo root) — bundles the *existing* TUI app as-is, no new UI code | `.github/workflows/build-windows.yml`, `windows-latest` runner | **CI build confirmed green** (1m17s) — `dist/cypher-dds.exe`, 14.7MB artifact |
 | Android `.apk` | Buildozer (`buildozer.spec` + `main.py`, repo root) — packages the new Kivy mobile app; runs the official `ghcr.io/kivy/buildozer` Docker image directly, not the `ArtemSBulgakov/buildozer-action` GitHub Action (see below) | `.github/workflows/build-android.yml`, `ubuntu-latest` runner | **CI build confirmed green** (13m53s cold), 21.4MB debug APK artifact |
-| Linux `.AppImage` | PyInstaller (same `cypher-dds.spec` as Windows, same TUI binary) wrapped into a single-file AppImage via `appimagetool`, so it runs unmodified on the major distro families (Ubuntu, Fedora, Arch, Debian, openSUSE, …) with no `.deb`/`.rpm`/pacman packages to maintain separately | `.github/workflows/build-linux.yml`, `ubuntu-22.04` runner (deliberately not `ubuntu-latest` — older glibc runs on more distros) | pushed, not yet watched through CI — see below |
+| Linux `.AppImage` | PyInstaller (same `cypher-dds.spec` as Windows, same TUI binary) wrapped into a single-file AppImage via `appimagetool`, so it runs unmodified on the major distro families (Ubuntu, Fedora, Arch, Debian, openSUSE, …) with no `.deb`/`.rpm`/pacman packages to maintain separately | `.github/workflows/build-linux.yml`, `ubuntu-22.04` runner (deliberately not `ubuntu-latest` — older glibc runs on more distros) | **CI build confirmed green** (49s) — `dist/cypher-dds-x86_64.AppImage`, 23.7MB artifact |
 
-Both were actually pushed and watched through CI to green, not just written
-and assumed to work — three real failures got fixed along the way, all
-external/upstream, not app bugs:
+All three were actually pushed and watched through CI to green, not just
+written and assumed to work. The Windows/Android builds hit three real
+failures along the way, all external/upstream, not app bugs; the Linux
+AppImage build went green on the first push:
 1. `ArtemSBulgakov/buildozer-action`'s own Dockerfile layers extra apt
    packages onto the `kivy/buildozer` base image and pulls in
    `ppa:openjdk-r/ppa`, which doesn't have a Release file for that image's
@@ -124,13 +125,20 @@ external/upstream, not app bugs:
    bionic libc doesn't expose those before API 24. Fixed by bumping
    `android.minapi` from 23 to 24 in `buildozer.spec`.
 
-Both are CI-built by necessity: PyInstaller must run on the target OS (no
-cross-compiling a `.exe` from Linux), and Buildozer needs a full Android
-SDK/NDK toolchain this dev environment doesn't have. **What CI green does
-NOT prove:** neither artifact has been installed and run on real end-user
-hardware — the `.exe` has never been launched on an actual Windows machine,
-the `.apk` has never been installed on a physical Android device or
-emulator. That's the real next verification step for both.
+Windows and Android are CI-built by necessity: PyInstaller must run on the
+target OS (no cross-compiling a `.exe` from Linux), and Buildozer needs a
+full Android SDK/NDK toolchain this dev environment doesn't have. The Linux
+AppImage *could* be built locally (this dev environment is Linux), but runs
+in CI too for a clean, reproducible ubuntu-22.04 build rather than whatever
+glibc this sandbox happens to have. **What CI green does NOT prove:** none
+of the three artifacts has been run on real end-user hardware — the `.exe`
+has never been launched on an actual Windows machine, the `.apk` has never
+been installed on a physical Android device or emulator, and the AppImage
+has never been run outside this CI job (not even locally in this sandbox).
+That's the real next verification step for all three — the AppImage is the
+cheapest of the three to actually check, since it just needs a Linux
+machine with FUSE (or `--appimage-extract-and-run`), not a second OS or
+physical device.
 
 ## Tests (`tests/`)
 
