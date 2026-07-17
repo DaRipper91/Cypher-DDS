@@ -9,7 +9,13 @@ community. Tables below are seeds; expand as documentation is gathered.
 
 from __future__ import annotations
 
-from cypher_dds.core.actions import ActionCategory, DiagnosticAction, SupportLevel
+from cypher_dds.core.actions import (
+    ActionCategory,
+    AdapterTier,
+    DiagnosticAction,
+    SupportLevel,
+)
+from cypher_dds.core.uds import read_data_by_identifier
 from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profile
 
 # GM manufacturer-specific (P1xxx) DTC definitions, sourced from public
@@ -474,8 +480,9 @@ class GMProfile(VehicleProfile):
                     "using Mode 22 PID 1940."
                 ),
                 category=ActionCategory.SERVICE,
-                commands=("221940",),
-                expected_prefixes=("621940",),
+                uds_requests=(read_data_by_identifier(0x1940),),
+                target_ecu_family="gm_tcm",
+                adapter_tier=AdapterTier.CAN_UDS,
                 support_level=SupportLevel.IMPLEMENTED,
             ),
         )

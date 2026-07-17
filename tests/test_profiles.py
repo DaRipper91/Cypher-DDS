@@ -21,6 +21,7 @@ def test_all_profiles_follow_the_same_interface():
         assert profile is not None
         assert profile.get_dtc_description("P0000") is None
         assert profile.enhanced_pids() == () or isinstance(profile.enhanced_pids(), tuple)
+        assert profile.supported_actions()
 
 
 def test_unknown_profile_key_returns_none():

@@ -16,7 +16,13 @@ MS-CAN-only parameter first.
 
 from __future__ import annotations
 
-from cypher_dds.core.actions import ActionCategory, DiagnosticAction, SupportLevel
+from cypher_dds.core.actions import (
+    ActionCategory,
+    AdapterTier,
+    DiagnosticAction,
+    SupportLevel,
+)
+from cypher_dds.core.uds import read_data_by_identifier
 from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profile
 
 # Ford manufacturer-specific (P1xxx) DTC definitions, sourced from public
@@ -499,8 +505,9 @@ class FordProfile(VehicleProfile):
                     "temperature using Mode 22 PID 1E1C."
                 ),
                 category=ActionCategory.SERVICE,
-                commands=("221E1C",),
-                expected_prefixes=("621E1C",),
+                uds_requests=(read_data_by_identifier(0x1E1C),),
+                target_ecu_family="ford_tcm",
+                adapter_tier=AdapterTier.CAN_UDS,
                 support_level=SupportLevel.IMPLEMENTED,
             ),
             DiagnosticAction(
@@ -510,8 +517,9 @@ class FordProfile(VehicleProfile):
                     "Read Ford PCM enhanced data for engine oil temperature using Mode 22 PID 1310."
                 ),
                 category=ActionCategory.SERVICE,
-                commands=("221310",),
-                expected_prefixes=("621310",),
+                uds_requests=(read_data_by_identifier(0x1310),),
+                target_ecu_family="ford_pcm",
+                adapter_tier=AdapterTier.CAN_UDS,
                 support_level=SupportLevel.IMPLEMENTED,
             ),
         )

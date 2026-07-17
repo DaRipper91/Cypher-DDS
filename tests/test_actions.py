@@ -3,9 +3,11 @@
 import cypher_dds.profiles  # noqa: F401 — registers all built-in vehicle profiles
 from cypher_dds.core.actions import (
     ActionCategory,
+    AdapterTier,
     ActionConfirmationRequiredError,
     ActionNotFoundError,
     SupportLevel,
+    UDSNegativeResponseError,
     UnsupportedActionError,
 )
 from cypher_dds.profiles.base import get_profile
@@ -46,6 +48,18 @@ def test_action_catalog_exposes_service_and_future_write_categories():
     assert actions["kia.clear_emissions_dtcs"].support_level == SupportLevel.IMPLEMENTED
     assert actions["kia.body_control_coding"].support_level == SupportLevel.PLANNED
     assert actions["kia.module_programming"].support_level == SupportLevel.BLOCKED
+    assert actions["kia.clear_emissions_dtcs"].target_ecu_family == "kia_ecm"
+    assert actions["kia.tester_present"].uds_requests
+    assert actions["kia.tester_present"].adapter_tier == AdapterTier.CAN_UDS
+    assert actions["kia.enter_extended_session"].uds_requests
+    assert actions["kia.body_control_coding"].target_ecu_family == "kia_bcm"
+    assert actions["kia.body_control_coding"].required_session == 0x03
+    assert actions["kia.body_control_coding"].security_access_level == 1
+    assert actions["kia.body_control_coding"].adapter_tier == AdapterTier.CAN_UDS_SECURITY
+
+    gm_actions = {action.key: action for action in get_profile("gm").supported_actions()}
+    assert gm_actions["gm.read_trans_fluid_temp"].uds_requests
+    assert gm_actions["gm.read_trans_fluid_temp"].target_ecu_family == "gm_tcm"
 
 
 def test_run_action_requires_explicit_confirmation_for_mutating_commands():
@@ -112,6 +126,23 @@ def test_run_action_rejects_unknown_or_placeholder_actions():
         pass
     else:
         raise AssertionError("expected UnsupportedActionError")
+
+
+def test_run_action_raises_specific_error_for_uds_negative_response():
+    session = DiagnosticSession()
+    session.connect(mock_scenario="uds_negative")
+    session.resolve_vehicle()
+
+    try:
+        session.run_action("gm.enter_extended_session")
+    except UDSNegativeResponseError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("expected UDSNegativeResponseError")
+
+    assert "0x10" in message
+    assert "0x22" in message
+    assert "Conditions not correct" in message
 
 
 def test_all_current_profiles_expose_ecu_family_catalogs():

@@ -63,6 +63,16 @@ _SCENARIOS: dict[str, dict[str, str]] = {
         "ATDPN": "A6",
         "0902": "49 02 01 31 47 31",
     },
+    "uds_negative": {
+        "ATZ": "ELM327 v1.5",
+        "ATE0": "OK",
+        "ATL0": "OK",
+        "ATH0": "OK",
+        "ATSP0": "OK",
+        "ATDPN": "A6",
+        "0902": "49 02 01 31 47 31 5A 45 35 53 54 39 4A 46 31 32 33 34 35 36",
+        "1003": "7F 10 22",
+    },
 }
 
 
