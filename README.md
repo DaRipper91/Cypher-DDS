@@ -37,6 +37,9 @@ Implemented today:
 - standard OBD-II DTC clearing
 - VIN retrieval and WMI-based make selection
 - cross-make action catalog with confirmation-gated mutating actions
+- typed UDS request helpers for session, read, write, routine, and security-access services
+- UDS negative-response classification plus action prerequisite metadata
+- vehicle-tied coding manifest layer for persistent feature-write research
 - first OEM-specific enhanced-data actions for GM and Ford
 - desktop GUI workflow with:
   - structured DTC detail table
@@ -50,7 +53,7 @@ Implemented today:
 
 Not implemented as broad production support:
 
-- general OEM coding
+- executable persistent OEM coding writes
 - broad active-test coverage
 - module programming / flashing
 
@@ -98,6 +101,13 @@ Design rules:
 
 Cypher-DDS now has a real action framework, but support is staged.
 
+Foundation now present:
+
+- typed UDS request models instead of raw hex-only action definitions
+- explicit UDS negative-response handling
+- action prerequisite metadata for target ECU, session, security level, and adapter tier
+- a separate vehicle-tied coding manifest for persistent feature-write research entries
+
 Implemented across makes:
 
 - clear emissions DTCs
@@ -117,6 +127,11 @@ Planned but not broadly implemented:
 - transmission adaptation reset
 - ABS bleed
 - EPB service mode
+
+Research-tracked but not executable yet:
+
+- persistent auto stop-start disable entries for seeded Ford, GM, and Dodge/Chrysler-family platforms
+- per-vehicle coding/write procedures tracked separately from the generic action catalog
 
 Blocked by design:
 
@@ -222,6 +237,7 @@ Key docs in this repo:
 
 - [Cypher-DDS_MASTER.md](Cypher-DDS_MASTER.md)
 - [PROJECT_STATUS.md](PROJECT_STATUS.md)
+- [VEHICLE_TIED_CODING_FUNCTIONS_ROADMAP.md](VEHICLE_TIED_CODING_FUNCTIONS_ROADMAP.md)
 - [PRODUCTION_REVIEW_2026-07-17.md](PRODUCTION_REVIEW_2026-07-17.md)
 - [plans/00-ROADMAP.md](plans/00-ROADMAP.md)
 - [plans/01-GUI-PLAN.md](plans/01-GUI-PLAN.md)

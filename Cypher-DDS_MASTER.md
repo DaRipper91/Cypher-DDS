@@ -50,6 +50,7 @@ Current maturity should be described honestly as:
 - credible multi-surface architecture
 - staged bi-directional framework
 - early OEM-specific extension path
+- vehicle-tied coding research foundation
 - incomplete runtime validation on packaged desktop GUI and Android surfaces
 
 Cypher-DDS is not yet a production-grade cross-OEM coding/programming tool.
@@ -66,12 +67,14 @@ Implemented:
 - VIN/WMI profile selection
 - make-aware DTC enrichment
 - action catalog and action execution model
+- typed UDS helper layer for session/read/write/routine/security requests
+- vehicle-tied coding manifest layer for persistent feature-write research
 - desktop and mobile presentation surfaces
 
 Blocked or intentionally limited:
 
 - broad OEM active tests
-- broad OEM coding
+- executable cross-OEM coding writes
 - programming / flashing
 
 ---

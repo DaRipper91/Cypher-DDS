@@ -7,6 +7,11 @@ Current presentation layers:
 - **Desktop GUI (`cypher_dds.gui`)**: Tkinter MVP implemented, not yet runtime-validated on packaged desktop artifacts.
 - **Mobile (`cypher_dds.mobile`)**: Kivy app, Android Bluetooth path implemented in code, still untested on real hardware.
 
+The repo also now has a staged OEM-write foundation:
+- typed UDS request helpers
+- action prerequisite metadata and negative-response handling
+- a separate vehicle-tied coding manifest for persistent feature-write research
+
 See [plans/01-GUI-PLAN.md](/home/daripper/Projects/Cypher-DDS/plans/01-GUI-PLAN.md) for the current desktop + Android GUI implementation plan.
 
 ---
@@ -38,9 +43,16 @@ See [plans/01-GUI-PLAN.md](/home/daripper/Projects/Cypher-DDS/plans/01-GUI-PLAN.
 - **Goal:** Transition UIs from manual refresh to continuous live-data polling, add confirmation-gated DTC clearing (Mode 04), and polish UI layouts.
 - **Plan:** [plans/01-GUI-PLAN.md](/home/daripper/Projects/Cypher-DDS/plans/01-GUI-PLAN.md#cross-platform-gui-milestones)
 
+### Milestone 6: Vehicle-Tied Coding Execution
+- **Status:** In Progress
+- **Goal:** Move from generic planned coding actions to verified per-vehicle persistent coding workflows with explicit ECU/session/security requirements.
+- **Plan:** [VEHICLE_TIED_CODING_FUNCTIONS_ROADMAP.md](/home/daripper/Projects/Cypher-DDS/VEHICLE_TIED_CODING_FUNCTIONS_ROADMAP.md)
+
 ---
 
 ## Completed Milestones
 - TUI baseline and shared session architecture
 - Desktop GUI MVP scaffold
 - Android Bluetooth transport code path
+- Typed UDS action foundation
+- Vehicle-tied coding manifest foundation

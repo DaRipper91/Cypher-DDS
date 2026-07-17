@@ -20,14 +20,16 @@ Update this file as pieces land.
 | `pids.py` | Mode 01 PID table + decode math (RPM, speed, coolant temp, intake temp, MAF, throttle position, fuel level); `read_pid()` issues a request through ELM327 and returns the decoded value | done |
 | `dtc.py` | Mode 03/04 DTC read/clear, SAE J2012 byte decode, generic P0xxx table (~40 codes) | done |
 | `vin.py` | Mode 09 VIN retrieval, WMI → manufacturer decode | done — `WMI_TABLE` now includes Kia routing in addition to the original makes |
-| `mock_adapter.py` | `MockELM327Adapter` — canned AT/PID/DTC/VIN/action responses (`default`, `ford`, `no_adapter`, `malformed_vin` scenarios) for dev without hardware | done |
-| `actions.py` | Cross-make bi-directional action model: action manifests, support levels, confirmation gates, response validation, and execution helper | done |
+| `mock_adapter.py` | `MockELM327Adapter` — canned AT/PID/DTC/VIN/action responses (`default`, `ford`, `no_adapter`, `malformed_vin`, `uds_negative` scenarios) for dev without hardware | done |
+| `actions.py` | Cross-make bi-directional action model: action manifests, support levels, confirmation gates, prerequisite metadata, UDS negative-response handling, and execution helper | done |
+| `uds.py` | Minimal typed UDS request/response helpers for session control, tester present, RDBI/WDBI, routine control, security access, and negative-response parsing | done |
+| `vehicle_coding.py` | Vehicle-tied persistent coding-function manifest model, separate from the generic action catalog | done |
 
 ## Session layer (`cypher_dds.session`)
 
 `DiagnosticSession` owns connect (USB, Bluetooth, or mock) + VIN/profile
 resolution + DTC reads (with brand-fallback descriptions) + live PID reads
-+ action discovery/execution, as plain framework-agnostic Python. The TUI,
++ action discovery/execution + vehicle-tied coding-function discovery, as plain framework-agnostic Python. The TUI,
 Tkinter desktop GUI, and Kivy mobile app all drive the exact same class.
 Fully unit tested (`test_session.py`) independent of either UI framework.
 `done`
@@ -36,10 +38,10 @@ Fully unit tested (`test_session.py`) independent of either UI framework.
 
 | Profile | Coverage target | Status |
 |---|---|---|
-| `base.py` | `VehicleProfile` interface + registry + default action catalog + ECU-family accessors | done |
-| `gm.py` | GM, 1996+ (J1850 VPW pre-2008, CAN 2008+) | DTC_TABLE populated (402 P1xxx codes); 1 enhanced PID; 1 OEM-specific implemented enhanced-data action (`gm.read_trans_fluid_temp`) |
-| `ford.py` | Ford, 1996+ (J1850 PWM pre-2008, CAN 2008+). **Only the standard OBD2 bus is reachable via a basic ELM327 — MS-CAN (body/comfort systems) is out of scope for v1.** | DTC_TABLE populated (410 P1xxx codes, incl. Power Stroke diesel); 2 enhanced PIDs; 2 OEM-specific implemented enhanced-data actions (`ford.read_trans_fluid_temp`, `ford.read_engine_oil_temp`) |
-| `dodge_chrysler.py` | Dodge/Chrysler, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+). The proprietary SCI/CCD body bus is out of scope for v1 (same category as Ford's MS-CAN). | DTC_TABLE populated (97 P1xxx codes, incl. diesel/CNG variants); enhanced PIDs still stub |
+| `base.py` | `VehicleProfile` interface + registry + default action catalog + ECU-family accessors + vehicle-tied coding-function accessor | done |
+| `gm.py` | GM, 1996+ (J1850 VPW pre-2008, CAN 2008+) | DTC_TABLE populated (402 P1xxx codes); 1 enhanced PID; 1 OEM-specific implemented enhanced-data action (`gm.read_trans_fluid_temp`); 12 seeded research-state persistent coding entries |
+| `ford.py` | Ford, 1996+ (J1850 PWM pre-2008, CAN 2008+). **Only the standard OBD2 bus is reachable via a basic ELM327 — MS-CAN (body/comfort systems) is out of scope for v1.** | DTC_TABLE populated (410 P1xxx codes, incl. Power Stroke diesel); 2 enhanced PIDs; 2 OEM-specific implemented enhanced-data actions (`ford.read_trans_fluid_temp`, `ford.read_engine_oil_temp`); 6 seeded research-state persistent coding entries |
+| `dodge_chrysler.py` | Dodge/Chrysler, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+). The proprietary SCI/CCD body bus is out of scope for v1 (same category as Ford's MS-CAN). | DTC_TABLE populated (97 P1xxx codes, incl. diesel/CNG variants); enhanced PIDs still stub; 8 seeded research-state persistent coding entries |
 | `toyota_lexus.py` | Toyota/Lexus, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+) | DTC_TABLE populated (44 P1xxx codes); enhanced PIDs still stub |
 | `honda_acura.py` | Honda/Acura, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+) | DTC_TABLE populated (94 P1xxx codes); enhanced PIDs still stub |
 | `kia.py` | Kia, 1996+ (ISO 9141-2/KWP2000 pre-2008, CAN 2008+) | profile registration + VIN/WMI routing done; Kia-specific DTC/enhanced PID/action depth pending |
@@ -80,7 +82,7 @@ presentation layer should own the other's shared branding.
 
 | Module | Purpose | Status |
 |---|---|---|
-| `app.py` | Tkinter desktop GUI wired to `DiagnosticSession`: mock/USB/Bluetooth connect, VIN resolve, DTC read, structured DTC detail table, clear-DTC flow with confirmation, live-data refresh, action discovery, category filtering, action execution with confirmation and log output | done as MVP, runtime validation of packaged artifacts pending |
+| `app.py` | Tkinter desktop GUI wired to `DiagnosticSession`: mock/USB/Bluetooth connect, VIN resolve, DTC read, structured DTC detail table, clear-DTC flow with confirmation, live-data refresh, action discovery, category filtering, action execution with confirmation and log output | done as MVP, runtime validation of packaged artifacts pending; coding-function manifest not surfaced in the GUI yet |
 
 ## Mobile (`cypher_dds.mobile`) — Android
 
@@ -153,7 +155,7 @@ physical device.
 
 ## Tests (`tests/`)
 
-79 tests, 0 skipped. `test_pids.py`, `test_elm327.py`, `test_serial_conn.py`,
+82 tests, 0 skipped. `test_pids.py`, `test_elm327.py`, `test_serial_conn.py`,
 `test_dtc.py`, `test_vin.py`, and `test_bluetooth_adapter.py` all exercise
 real logic against `MockELM327Adapter` (or a mocked socket layer for
 Bluetooth): PID decode math (including `read_pid()`), the full ELM327
@@ -164,14 +166,14 @@ exclusion), `request_vin` (including the malformed-VIN length-validation
 path), and the Bluetooth RFCOMM socket wiring (address/channel routing,
 timeout handling, the unsupported-platform error path).
 `test_profiles.py` locks in real P1xxx lookups for all six registered
-profiles plus the GM/Ford enhanced-PID entries. `test_session.py` exercises the full
+profiles plus the GM/Ford enhanced-PID entries and the seeded vehicle-tied coding manifests. `test_session.py` exercises the full
 connect → VIN → DTC → live-data flow as plain Python, independent of
-either UI framework. `test_tui_app.py` runs Textual's headless harness
+either UI framework, and now also covers profile-driven coding-function discovery. `test_tui_app.py` runs Textual's headless harness
 at the widget/app-dispatch level rather than through Textual's flaky
 threaded headless worker path under this Python/Textual combination.
 `test_actions.py` and `test_serial_conn_android.py` now cover the
-bi-directional action framework, OEM-specific enhanced-read actions, and
-Android Bluetooth routing. The Kivy mobile app still has no equivalent
+bi-directional action framework, OEM-specific enhanced-read actions, UDS negative-response handling, and
+Android Bluetooth routing. `test_uds.py` covers the typed UDS helper layer directly. The Kivy mobile app still has no equivalent
 headless UI test yet (see Mobile caveats).
 
 ## Next steps (not yet started)
@@ -180,11 +182,13 @@ headless UI test yet (see Mobile caveats).
    `plans/02-ANDROID-VALIDATION.md`.
 2. **Run the packaged desktop GUI artifacts on real Linux/Windows systems**
    using `plans/03-DESKTOP-GUI-VALIDATION.md` to close the runtime-verification gap left by CI-only packaging.
-3. Add broader OEM-specific action coverage beyond enhanced reads:
+3. Pick one confirmed vehicle-tied coding slice and move it from research
+   metadata into an executable write flow with mock coverage.
+4. Add broader OEM-specific action coverage beyond enhanced reads:
    transmission service routines, ABS bleed, EPB service mode, and coding
    only where identifiers are validated.
-4. Build a stronger UDS/transport layer before any serious programming or
-   security-access work.
+5. Build beyond the current minimal UDS helper layer before any serious
+   flashing/programming work.
 
 ## Planned features (TUI + mobile/GUI)
 
