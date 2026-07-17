@@ -10,15 +10,13 @@ App.call_from_thread().
 IMPORTANT CAVEATS (read before assuming this "just works" on a phone):
   - This has never been run on a physical Android device or emulator —
     there's no Android SDK/toolchain in this repo's dev environment. The
-    only verification that exists is .github/workflows/build-android.yml
-    successfully *packaging* it into an APK on a GitHub Actions runner.
-    A green CI build means "it built," not "it runs correctly on a phone."
-  - Bluetooth is NOT implemented here. cypher_dds.core.BluetoothSerialAdapter
-    uses desktop Linux's socket.AF_BLUETOOTH (BlueZ), which Android doesn't
-    expose to Python the same way — a real Android backend needs a pyjnius
-    bridge to android.bluetooth.BluetoothSocket, which isn't written and
-    can't be verified without a physical device. This app only connects to
-    the mock adapter for now, so it's still fully demoable via CI.
+    only verification that exists is packaging plus local mocked tests.
+    A green build means "it built," not "it runs correctly on a phone."
+  - Android Bluetooth transport now exists in the core layer via
+    AndroidBluetoothSerialAdapter and is selected when this UI requests a
+    Bluetooth connection on Android. That code path is still not validated
+    on a physical device with a real adapter, so support remains
+    implementation-level rather than field-proven.
 """
 
 from __future__ import annotations
