@@ -16,6 +16,7 @@ from cypher_dds.core.actions import (
     SupportLevel,
 )
 from cypher_dds.core.uds import read_data_by_identifier
+from cypher_dds.core.vehicle_coding import CodingFunctionStatus, VehicleCodingFunction
 from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profile
 
 # GM manufacturer-specific (P1xxx) DTC definitions, sourced from public
@@ -458,6 +459,21 @@ ENHANCED_PIDS: tuple[EnhancedPID, ...] = (
     ),
 )
 
+CODING_FUNCTIONS: tuple[VehicleCodingFunction, ...] = (
+    VehicleCodingFunction("gm.silverado_1500_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Silverado 1500", "T1XX", "2019+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.equinox_d2xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Equinox", "D2XX", "2018-2024", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.equinox_d2xx_2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Equinox", "D2XX-2", "2025+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.tahoe_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Tahoe", "T1XX", "2021+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.suburban_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Suburban", "T1XX", "2021+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.traverse_c1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Traverse", "C1XX", "2018-2023", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.traverse_c1xx_2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Traverse", "C1XX-2", "2024+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.colorado_31xx_2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Colorado", "31XX-2", "2023+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.trax_unknown.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Trax", "-", "-", "disable_auto_stop_start_persistent", powertrain_notes="ASS configuration requires further validation", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.sierra_1500_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "GMC", "Sierra 1500", "T1XX", "2019+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.yukon_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "GMC", "Yukon", "T1XX", "2021+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("gm.canyon_31xx_2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "GMC", "Canyon", "31XX-2", "2023+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+)
+
 
 class GMProfile(VehicleProfile):
     key = "gm"
@@ -486,6 +502,9 @@ class GMProfile(VehicleProfile):
                 support_level=SupportLevel.IMPLEMENTED,
             ),
         )
+
+    def coding_functions(self) -> tuple[VehicleCodingFunction, ...]:
+        return CODING_FUNCTIONS
 
 
 register_profile(GMProfile())

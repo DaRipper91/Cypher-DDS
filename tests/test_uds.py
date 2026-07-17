@@ -5,7 +5,11 @@ from cypher_dds.core.uds import (
     diagnostic_session_control,
     parse_negative_response,
     read_data_by_identifier,
+    routine_control,
+    security_access_request_seed,
+    security_access_send_key,
     tester_present as build_tester_present,
+    write_data_by_identifier,
 )
 
 
@@ -34,3 +38,17 @@ def test_parse_negative_response_extracts_service_and_code():
     assert negative.service_id == 0x10
     assert negative.response_code == 0x22
     assert negative.code_name == "Conditions not correct"
+
+
+def test_phase_three_uds_helpers_encode_write_security_and_routine_requests():
+    assert write_data_by_identifier(0x1234, b"\xAA\x55").command_hex() == "2E1234AA55"
+    assert write_data_by_identifier(0x1234, b"\xAA\x55").positive_response_prefix() == "6E1234"
+
+    assert security_access_request_seed(0x01).command_hex() == "2701"
+    assert security_access_request_seed(0x01).positive_response_prefix() == "6701"
+
+    assert security_access_send_key(0x02, b"\x10\x20").command_hex() == "27021020"
+    assert security_access_send_key(0x02, b"\x10\x20").positive_response_prefix() == "6702"
+
+    assert routine_control(0x01, 0xFF00, b"\x99").command_hex() == "3101FF0099"
+    assert routine_control(0x01, 0xFF00, b"\x99").positive_response_prefix() == "7101FF00"

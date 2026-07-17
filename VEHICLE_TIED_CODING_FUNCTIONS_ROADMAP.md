@@ -72,7 +72,8 @@ This tracker only becomes real product work if the transport/action stack undern
 
 - Phase 1 is started: the action layer now uses typed UDS request models for existing UDS-backed actions
 - Phase 2 is started: UDS negative responses are now classified separately from generic response mismatches, and actions can declare ECU/session/security/adapter prerequisites
-- No real persistent coding write routine is implemented yet; the next step is to add security-access and write-service helpers for one specific vehicle slice
+- Phase 3 is started: the repo now has dedicated vehicle-tied coding manifest models plus seeded research entries for Ford, GM, and Dodge/Chrysler-family auto stop-start targets
+- No real persistent coding write routine is implemented yet; the next step is to move one confirmed vehicle slice from research metadata into an executable write flow
 
 ### Phase 1 - UDS action foundation
 

@@ -14,6 +14,7 @@ federally-mandated OBD2 protocol.
 
 from __future__ import annotations
 
+from cypher_dds.core.vehicle_coding import CodingFunctionStatus, VehicleCodingFunction
 from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profile
 
 # Dodge/Chrysler manufacturer-specific (P1xxx) DTC definitions, sourced from
@@ -132,6 +133,17 @@ ENHANCED_PIDS: tuple[EnhancedPID, ...] = (
     # EnhancedPID(pid="22F440", name="TIPM_STATUS", description="Totally Integrated Power Module status", unit=""),
 )
 
+CODING_FUNCTIONS: tuple[VehicleCodingFunction, ...] = (
+    VehicleCodingFunction("dodge_chrysler.ram_1500_dt.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "dodge_chrysler", "Ram", "Ram 1500", "DT", "2019+", "disable_auto_stop_start_persistent", powertrain_notes="eTorque and supported newer powertrains", target_ecu_family="mopar_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("dodge_chrysler.ram_1500_classic_ds.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "dodge_chrysler", "Ram", "Ram 1500 Classic", "DS", "-", "disable_auto_stop_start_persistent", powertrain_notes="Do not inherit DT ASS support automatically", target_ecu_family="mopar_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("dodge_chrysler.durango_wd.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "dodge_chrysler", "Dodge", "Durango", "WD", "2016-2025", "disable_auto_stop_start_persistent", powertrain_notes="Primarily 3.6L Pentastar V6", target_ecu_family="mopar_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("dodge_chrysler.pacifica_ru.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "dodge_chrysler", "Chrysler", "Pacifica", "RU", "2018+", "disable_auto_stop_start_persistent", powertrain_notes="Exclude Pacifica Hybrid from conventional ASS logic", target_ecu_family="mopar_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("dodge_chrysler.voyager_ru.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "dodge_chrysler", "Chrysler", "Voyager", "RU", "2020+", "disable_auto_stop_start_persistent", target_ecu_family="mopar_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("dodge_chrysler.grand_cherokee_wk2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "dodge_chrysler", "Jeep", "Grand Cherokee", "WK2", "2016-2021", "disable_auto_stop_start_persistent", powertrain_notes="Primarily 3.6L Pentastar V6", target_ecu_family="mopar_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("dodge_chrysler.grand_cherokee_wl.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "dodge_chrysler", "Jeep", "Grand Cherokee", "WL", "2021+", "disable_auto_stop_start_persistent", powertrain_notes="Exclude 4xe from conventional ASS logic", target_ecu_family="mopar_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction("dodge_chrysler.grand_cherokee_l_wl.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "dodge_chrysler", "Jeep", "Grand Cherokee L", "WL", "2021+", "disable_auto_stop_start_persistent", powertrain_notes="Exclude hybrid configurations from conventional ASS logic", target_ecu_family="mopar_bcm", status=CodingFunctionStatus.RESEARCH),
+)
+
 
 class DodgeChryslerProfile(VehicleProfile):
     key = "dodge_chrysler"
@@ -143,6 +155,9 @@ class DodgeChryslerProfile(VehicleProfile):
 
     def enhanced_pids(self) -> tuple[EnhancedPID, ...]:
         return ENHANCED_PIDS
+
+    def coding_functions(self) -> tuple[VehicleCodingFunction, ...]:
+        return CODING_FUNCTIONS
 
 
 register_profile(DodgeChryslerProfile())

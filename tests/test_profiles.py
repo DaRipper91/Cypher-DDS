@@ -7,6 +7,7 @@ coverage later without requiring changes in core/session code.
 
 from cypher_dds.profiles import base  # noqa: F401 (triggers registration)
 from cypher_dds.profiles.base import all_profiles, get_profile
+from cypher_dds.core.vehicle_coding import CodingFunctionStatus
 
 EXPECTED_KEYS = {"gm", "ford", "dodge_chrysler", "toyota_lexus", "honda_acura", "kia"}
 
@@ -22,6 +23,7 @@ def test_all_profiles_follow_the_same_interface():
         assert profile.get_dtc_description("P0000") is None
         assert profile.enhanced_pids() == () or isinstance(profile.enhanced_pids(), tuple)
         assert profile.supported_actions()
+        assert profile.coding_functions() == () or isinstance(profile.coding_functions(), tuple)
 
 
 def test_unknown_profile_key_returns_none():
@@ -80,3 +82,16 @@ def test_gm_and_ford_enhanced_pids_are_populated():
     ford_pids = {p.name: p for p in get_profile("ford").enhanced_pids()}
     assert ford_pids["TRANS_FLUID_TEMP"].pid == "221E1C"
     assert ford_pids["ENGINE_OIL_TEMP"].pid == "221310"
+
+
+def test_vehicle_tied_coding_functions_are_seeded_for_target_profiles():
+    ford_functions = get_profile("ford").coding_functions()
+    gm_functions = get_profile("gm").coding_functions()
+    mopar_functions = get_profile("dodge_chrysler").coding_functions()
+
+    assert len(ford_functions) == 6
+    assert len(gm_functions) == 12
+    assert len(mopar_functions) == 8
+    assert all(function.status == CodingFunctionStatus.RESEARCH for function in ford_functions)
+    assert all(function.target_function == "disable_auto_stop_start_persistent" for function in gm_functions)
+    assert any(function.brand == "Jeep" for function in mopar_functions)

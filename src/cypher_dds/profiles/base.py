@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from cypher_dds.core.actions import DiagnosticAction, default_profile_actions
+from cypher_dds.core.vehicle_coding import VehicleCodingFunction
 from cypher_dds.profiles.catalog import ECUFamily, profile_ecu_families
 
 
@@ -67,6 +68,10 @@ class VehicleProfile(ABC):
     def ecu_families(self) -> tuple[ECUFamily, ...]:
         """Return the targeted ECU-family catalog for this make."""
         return profile_ecu_families(self.key)
+
+    def coding_functions(self) -> tuple[VehicleCodingFunction, ...]:
+        """Return vehicle-tied persistent coding functions for this make."""
+        return ()
 
 
 _REGISTRY: dict[str, VehicleProfile] = {}

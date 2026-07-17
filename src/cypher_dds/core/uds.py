@@ -88,6 +88,27 @@ def read_data_by_identifier(data_identifier: int) -> UDSRequest:
     return UDSRequest(service_id=0x22, data_identifier=data_identifier)
 
 
+def write_data_by_identifier(data_identifier: int, payload: bytes) -> UDSRequest:
+    return UDSRequest(service_id=0x2E, data_identifier=data_identifier, payload=payload)
+
+
+def security_access_request_seed(level: int) -> UDSRequest:
+    return UDSRequest(service_id=0x27, subfunction=level)
+
+
+def security_access_send_key(level: int, key: bytes) -> UDSRequest:
+    return UDSRequest(service_id=0x27, subfunction=level, payload=key)
+
+
+def routine_control(control_type: int, routine_identifier: int, payload: bytes = b"") -> UDSRequest:
+    return UDSRequest(
+        service_id=0x31,
+        subfunction=control_type,
+        data_identifier=routine_identifier,
+        payload=payload,
+    )
+
+
 def parse_negative_response(response: str) -> UDSNegativeResponse | None:
     compact = "".join(response.upper().split())
     if len(compact) < 6 or not compact.startswith("7F"):

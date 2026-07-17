@@ -23,6 +23,7 @@ from cypher_dds.core.mock_adapter import MockELM327Adapter
 from cypher_dds.core.pids import read_pid
 from cypher_dds.core.serial_conn import SerialConnection
 from cypher_dds.core.vin import VINInfo, request_vin
+from cypher_dds.core.vehicle_coding import VehicleCodingFunction
 from cypher_dds.profiles.base import VehicleProfile, get_profile
 
 # Standard live-data row: (Mode 01 PID, display label, unit). Presentation
@@ -146,6 +147,12 @@ class DiagnosticSession:
         if self.profile is None:
             return ()
         return self.profile.supported_actions()
+
+    def available_coding_functions(self) -> tuple[VehicleCodingFunction, ...]:
+        """Return vehicle-tied persistent coding functions for the resolved make."""
+        if self.profile is None:
+            return ()
+        return self.profile.coding_functions()
 
     def run_action(self, key: str, *, confirm_write: bool = False) -> ActionResult:
         """Execute one declared bi-directional action by manifest key."""

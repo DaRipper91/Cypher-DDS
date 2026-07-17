@@ -23,6 +23,7 @@ from cypher_dds.core.actions import (
     SupportLevel,
 )
 from cypher_dds.core.uds import read_data_by_identifier
+from cypher_dds.core.vehicle_coding import CodingFunctionStatus, VehicleCodingFunction
 from cypher_dds.profiles.base import EnhancedPID, VehicleProfile, register_profile
 
 # Ford manufacturer-specific (P1xxx) DTC definitions, sourced from public
@@ -483,6 +484,85 @@ ENHANCED_PIDS: tuple[EnhancedPID, ...] = (
     ),
 )
 
+CODING_FUNCTIONS: tuple[VehicleCodingFunction, ...] = (
+    VehicleCodingFunction(
+        key="ford.f150_p552.disable_auto_stop_start_persistent",
+        title="Disable auto stop-start (persistent)",
+        profile_key="ford",
+        brand="Ford",
+        model="F-150",
+        platform="P552",
+        years="2017-2020",
+        target_function="disable_auto_stop_start_persistent",
+        powertrain_notes="EcoBoost",
+        target_ecu_family="ford_bcm",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        key="ford.f150_p702.disable_auto_stop_start_persistent",
+        title="Disable auto stop-start (persistent)",
+        profile_key="ford",
+        brand="Ford",
+        model="F-150",
+        platform="P702",
+        years="2021+",
+        target_function="disable_auto_stop_start_persistent",
+        powertrain_notes="Gasoline EcoBoost / PowerBoost needs separate handling",
+        target_ecu_family="ford_bcm",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        key="ford.explorer_u625.disable_auto_stop_start_persistent",
+        title="Disable auto stop-start (persistent)",
+        profile_key="ford",
+        brand="Ford",
+        model="Explorer",
+        platform="U625",
+        years="2020+",
+        target_function="disable_auto_stop_start_persistent",
+        target_ecu_family="ford_bcm",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        key="ford.escape_cx482.disable_auto_stop_start_persistent",
+        title="Disable auto stop-start (persistent)",
+        profile_key="ford",
+        brand="Ford",
+        model="Escape",
+        platform="CX482",
+        years="2020+",
+        target_function="disable_auto_stop_start_persistent",
+        powertrain_notes="Exclude hybrid powertrains from conventional ASS logic",
+        target_ecu_family="ford_bcm",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        key="ford.expedition_u553.disable_auto_stop_start_persistent",
+        title="Disable auto stop-start (persistent)",
+        profile_key="ford",
+        brand="Ford",
+        model="Expedition",
+        platform="U553",
+        years="2018+",
+        target_function="disable_auto_stop_start_persistent",
+        target_ecu_family="ford_bcm",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        key="ford.bronco_unknown.disable_auto_stop_start_persistent",
+        title="Disable auto stop-start (persistent)",
+        profile_key="ford",
+        brand="Ford",
+        model="Bronco",
+        platform="-",
+        years="2021+",
+        target_function="disable_auto_stop_start_persistent",
+        powertrain_notes="ASS configuration requires further validation",
+        target_ecu_family="ford_bcm",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+)
+
 
 class FordProfile(VehicleProfile):
     key = "ford"
@@ -523,6 +603,9 @@ class FordProfile(VehicleProfile):
                 support_level=SupportLevel.IMPLEMENTED,
             ),
         )
+
+    def coding_functions(self) -> tuple[VehicleCodingFunction, ...]:
+        return CODING_FUNCTIONS
 
 
 register_profile(FordProfile())

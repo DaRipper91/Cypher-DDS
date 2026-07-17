@@ -105,3 +105,15 @@ def test_clear_dtcs_succeeds_against_mock_adapter():
     session.connect()
 
     session.clear_dtcs()
+
+
+def test_available_coding_functions_follow_resolved_profile():
+    session = DiagnosticSession()
+    session.connect()
+    session.resolve_vehicle()
+
+    functions = session.available_coding_functions()
+
+    assert functions
+    assert all(function.profile_key == "gm" for function in functions)
+    assert all(function.status.value == "research" for function in functions)
