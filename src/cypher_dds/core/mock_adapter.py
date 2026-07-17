@@ -26,6 +26,8 @@ _SCENARIOS: dict[str, dict[str, str]] = {
         "010D": "41 0D 5A",
         "03": "43 03 01 01 04",  # two stored DTCs: P0301, P0104
         "04": "44",  # clear DTCs: positive response, no data
+        "1003": "50 03",  # UDS: enter extended diagnostic session
+        "3E00": "7E 00",  # UDS: tester present
         # VIN "1G1ZE5ST9JF123456" (WMI 1G1 -> gm), as Mode 09 PID 02 ASCII bytes
         "0902": "49 02 01 31 47 31 5A 45 35 53 54 39 4A 46 31 32 33 34 35 36",
     },

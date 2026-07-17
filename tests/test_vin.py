@@ -12,6 +12,7 @@ def test_wmi_table_has_seed_entries_for_target_brands():
     assert WMI_TABLE["1G1"] == "gm"
     assert WMI_TABLE["1FA"] == "ford"
     assert WMI_TABLE["1C3"] == "dodge_chrysler"
+    assert WMI_TABLE["KNA"] == "kia"
 
 
 def test_wmi_table_covers_non_us_manufacturing_plants():
@@ -24,6 +25,8 @@ def test_wmi_table_covers_non_us_manufacturing_plants():
     assert WMI_TABLE["JTH"] == "toyota_lexus"  # Toyota Motor Corporation (Lexus badge)
     assert WMI_TABLE["JHM"] == "honda_acura"  # Honda Motor Co.
     assert WMI_TABLE["2HG"] == "honda_acura"  # Honda of Canada Mfg.
+    assert WMI_TABLE["5XY"] == "kia"  # Kia Georgia MPV/SUV
+    assert WMI_TABLE["3KP"] == "kia"  # Kia Mexico passenger car
 
 
 def test_wmi_table_excludes_mercedes_daimlerchrysler_era_codes():
@@ -35,6 +38,10 @@ def test_wmi_table_excludes_mercedes_daimlerchrysler_era_codes():
 
 def test_decode_wmi_known_gm_vin():
     assert decode_wmi("1G1ZE5ST9JF123456") == "gm"
+
+
+def test_decode_wmi_known_kia_vin():
+    assert decode_wmi("5XYKT3A12CG123456") == "kia"
 
 
 def test_decode_wmi_unknown_prefix_returns_none():

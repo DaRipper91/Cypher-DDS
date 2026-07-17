@@ -18,7 +18,7 @@ from textual.containers import Horizontal
 from textual.reactive import reactive
 from textual.widgets import Footer, Header, Static
 
-import cypher_dds.profiles  # noqa: F401 — importing this registers all five vehicle profiles
+import cypher_dds.profiles  # noqa: F401 — importing this registers all built-in vehicle profiles
 from cypher_dds.profiles.base import VehicleProfile
 from cypher_dds.session import DEFAULT_LIVE_PIDS, DiagnosticSession
 from cypher_dds.core.vin import VINInfo

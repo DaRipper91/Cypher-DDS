@@ -11,6 +11,12 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from cypher_dds.core.actions import (
+    ActionNotFoundError,
+    ActionResult,
+    DiagnosticAction,
+    execute_action,
+)
 from cypher_dds.core.dtc import DTC, DTCReader
 from cypher_dds.core.elm327 import ELM327
 from cypher_dds.core.mock_adapter import MockELM327Adapter
@@ -127,3 +133,19 @@ class DiagnosticSession:
             except Exception:  # noqa: BLE001 — an unsupported PID shouldn't abort the batch
                 values[pid] = None
         return values
+
+    def available_actions(self) -> tuple[DiagnosticAction, ...]:
+        """Return the current make's declared bi-directional action catalog."""
+        if self.profile is None:
+            return ()
+        return self.profile.supported_actions()
+
+    def run_action(self, key: str, *, confirm_write: bool = False) -> ActionResult:
+        """Execute one declared bi-directional action by manifest key."""
+        if self.elm327 is None:
+            raise NotConnectedError("connect() must succeed before run_action()")
+
+        for action in self.available_actions():
+            if action.key == key:
+                return execute_action(self.elm327, action, confirm_write=confirm_write)
+        raise ActionNotFoundError(f"Unknown action key: {key}")

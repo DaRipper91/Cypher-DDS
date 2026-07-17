@@ -31,7 +31,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 
-import cypher_dds.profiles  # noqa: F401 — importing this registers all five vehicle profiles
+import cypher_dds.profiles  # noqa: F401 — importing this registers all built-in vehicle profiles
 from cypher_dds.core.vin import VINInfo
 from cypher_dds.session import DEFAULT_LIVE_PIDS, DiagnosticSession
 from cypher_dds.theme import CHERRY_RED, ROYAL_BLUE

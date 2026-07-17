@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-import cypher_dds.profiles  # noqa: F401 — registers all five vehicle profiles
+import cypher_dds.profiles  # noqa: F401 — registers all built-in vehicle profiles
 from cypher_dds.core.dtc import DTC
 from cypher_dds.session import DiagnosticSession, NotConnectedError
 

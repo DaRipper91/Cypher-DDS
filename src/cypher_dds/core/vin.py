@@ -19,7 +19,7 @@ class VINInfo:
     manufacturer: str | None  # resolved profile key, or None if unrecognized
 
 
-# World Manufacturer Identifier prefixes for the v1 target brands, pulled
+# World Manufacturer Identifier prefixes for the current target brands, pulled
 # from NHTSA's public vPIC database (vpic.nhtsa.dot.gov) — the official
 # US government VIN-decoding reference, not any single vendor's data.
 # Corporate-entity mapping notes:
@@ -110,6 +110,12 @@ WMI_TABLE: dict[str, str] = {
         "2HG", "2HH", "2HJ", "2HK", "2HN",
         "3CZ", "3DH", "3H1", "3HD", "3HG",
         "7FA", "JH1", "JH2", "JH3", "JH4", "JHL", "JHM", "JR2", "SHH", "SHS", "YC1", "ZDC",
+    )},
+    # Kia — Kia Corporation / Kia Georgia / Kia Mexico. Conservative subset
+    # covering the mainstream North American passenger-car and MPV/SUV WMIs
+    # this project is likely to encounter.
+    **{wmi: "kia" for wmi in (
+        "KNA", "KND", "5XX", "5XY", "3KP",
     )},
 }
 

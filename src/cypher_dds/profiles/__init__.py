@@ -8,4 +8,4 @@ reverse.
 Importing this package registers all built-in profiles as a side effect.
 """
 
-from cypher_dds.profiles import dodge_chrysler, ford, gm, honda_acura, toyota_lexus  # noqa: F401
+from cypher_dds.profiles import dodge_chrysler, ford, gm, honda_acura, kia, toyota_lexus  # noqa: F401

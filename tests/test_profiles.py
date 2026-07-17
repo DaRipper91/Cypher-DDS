@@ -1,20 +1,17 @@
 """Tests that the profile plugin architecture is actually brand-agnostic.
 
-All five v1 profiles now carry real DTC data (Toyota/Lexus and Honda/Acura
-were originally empty stubs specifically to prove new brands slot in via
-the same interface with zero core changes — that architectural point still
-holds, it's just that all five profiles are "full" now). Enhanced PIDs
-remain a stub for Dodge/Chrysler/Toyota/Lexus/Honda/Acura; only GM and Ford
-have any so far.
+Most built-in profiles now carry real DTC data. Kia support starts with
+registry + VIN routing and can grow its manufacturer-specific DTC/enhanced PID
+coverage later without requiring changes in core/session code.
 """
 
 from cypher_dds.profiles import base  # noqa: F401 (triggers registration)
 from cypher_dds.profiles.base import all_profiles, get_profile
 
-EXPECTED_KEYS = {"gm", "ford", "dodge_chrysler", "toyota_lexus", "honda_acura"}
+EXPECTED_KEYS = {"gm", "ford", "dodge_chrysler", "toyota_lexus", "honda_acura", "kia"}
 
 
-def test_all_five_v1_profiles_are_registered():
+def test_all_builtin_profiles_are_registered():
     assert EXPECTED_KEYS.issubset(all_profiles().keys())
 
 
@@ -65,6 +62,14 @@ def test_honda_acura_profile_resolves_known_manufacturer_codes():
     assert honda.get_dtc_description("P1201") == "Cylinder 1 Misfire"
     assert honda.get_dtc_description("P0300") is None  # generic code, not Honda's table
     assert honda.get_dtc_description("P9999") is None  # not a real code
+
+
+def test_kia_profile_registers_and_exposes_same_interface():
+    kia = get_profile("kia")
+    assert kia is not None
+    assert kia.display_name == "Kia"
+    assert kia.get_dtc_description("P0000") is None
+    assert kia.enhanced_pids() == ()
 
 
 def test_gm_and_ford_enhanced_pids_are_populated():

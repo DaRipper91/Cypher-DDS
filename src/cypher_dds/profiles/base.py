@@ -14,6 +14,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from cypher_dds.core.actions import DiagnosticAction, default_profile_actions
+from cypher_dds.profiles.catalog import ECUFamily, profile_ecu_families
+
 
 @dataclass(frozen=True)
 class EnhancedPID:
@@ -52,6 +55,18 @@ class VehicleProfile(ABC):
     @abstractmethod
     def enhanced_pids(self) -> tuple[EnhancedPID, ...]:
         """Return this brand's enhanced/manufacturer PID table, if any."""
+
+    def supported_actions(self) -> tuple[DiagnosticAction, ...]:
+        """Return the declared bi-directional action catalog for this make.
+
+        Subclasses can override this to add real OEM-specific routines once
+        validated identifiers and safety rules are available.
+        """
+        return default_profile_actions(self.key, self.display_name)
+
+    def ecu_families(self) -> tuple[ECUFamily, ...]:
+        """Return the targeted ECU-family catalog for this make."""
+        return profile_ecu_families(self.key)
 
 
 _REGISTRY: dict[str, VehicleProfile] = {}

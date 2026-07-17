@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](#license)
 [![Status](https://img.shields.io/badge/status-core%20layer%20implemented-yellow)](PROJECT_STATUS.md)
 
-Live PID data. Diagnostic trouble codes. VIN decoding. No cloud, no app store, no subscription — just your laptop, a cable, and the OBD2 port under your dash.
+Live PID data. Diagnostic trouble codes. VIN decoding. Early bi-directional service scaffolding. No cloud, no app store, no subscription — just your laptop, a cable, and the OBD2 port under your dash.
 
 **[⬇ Download the latest release](../../releases/latest)** — pick the file for your device:
 
@@ -31,8 +31,11 @@ Plug a USB ELM327 (or ELM327-clone / STN11xx) adapter into your car's OBD2 port 
 - Stream **live data** — RPM, speed, coolant temp, throttle position, and more
 - Read **diagnostic trouble codes (DTCs)**, with brand-aware descriptions where available
 - Pull and decode the **VIN**, using it to auto-select the right vehicle profile
+- Expose a **bi-directional action catalog** for supported makes, with explicit confirmation gates for mutating operations
 
 It works on any standard OBD2 vehicle (1996+, any protocol — J1850, ISO 9141-2, KWP2000, or CAN) out of the box, and gets smarter about specific brands through a plugin system — see [Architecture](#architecture) below. The terminal UI is the primary, most-tested interface; an Android app exists as an early demo (mock-adapter only for now — see [Other platforms](#other-platforms)).
+
+The current bi-directional layer is a framework, not a finished OEM write tool. Today it can execute a small seed set of generic service actions and declare planned active-test/coding/service targets per make. Real hidden-feature toggles, actuator tests, and module programming still require ECU-specific implementations.
 
 ## Why
 
@@ -53,14 +56,17 @@ Four layers, deliberately kept apart:
                              │  cypher_dds.session      │
                              │  connect → VIN/profile → │
                              │  DTC-read → live-PID-read│
+                             │  → action execution      │
                              │  Framework-agnostic — no │
                              │  UI code of its own.      │
                              └───────────┬────────────-─┘
                              │  optionally consulted for
-                             │  DTC descriptions / enhanced PIDs
+                             │  DTC descriptions / enhanced PIDs /
+                             │  ECU/action catalogs
 ┌───────────────────────────▼──────────────────────────────-─┐
 │  cypher_dds.profiles        (brand-specific plugins)        │
-│  GM · Ford · Dodge/Chrysler · Toyota/Lexus · Honda/Acura     │
+│  GM · Ford · Dodge/Chrysler · Toyota/Lexus · Honda/Acura ·   │
+│  Kia                                                         │
 │  Each is a self-contained module. New brand = new module,    │
 │  zero changes to core.                                       │
 └───────────────────────────┬──────────────────────────────-─┘
@@ -68,8 +74,8 @@ Four layers, deliberately kept apart:
 ┌───────────────────────────▼──────────────────────────────-─┐
 │  cypher_dds.core            (brand-agnostic)                │
 │  USB/Bluetooth serial transport → ELM327 AT layer →          │
-│  Mode 01/03/04/09. Works on any OBD2 vehicle, any protocol,  │
-│  with zero brand code.                                        │
+│  Mode 01/03/04/09 + seed action execution. Works on any OBD2 │
+│  vehicle for read-oriented diagnostics, with zero brand code.│
 └───────────────────────────────────────────────────────────-┘
 ```
 
@@ -86,6 +92,7 @@ Four layers, deliberately kept apart:
 | Dodge / Chrysler | 1996+ | ISO 9141-2 / ISO 14230-4 KWP (1996–2007ish) → CAN (2008+) | 🚧 DTC table done (97 P1xxx codes, incl. diesel/CNG); enhanced PIDs pending — see note below |
 | Toyota / Lexus | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🚧 DTC table done (44 P1xxx codes); enhanced PIDs pending |
 | Honda / Acura | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🚧 DTC table done (94 P1xxx codes); enhanced PIDs pending |
+| Kia | 1996+ | ISO 9141-2 / ISO 14230-4 KWP → CAN | 🚧 VIN/WMI routing + profile registration done; Kia-specific DTC/enhanced PID depth pending |
 
 Cypher-DDS never hardcodes a protocol — the ELM327's `ATSP0` auto-detect handles J1850 PWM/VPW, ISO 9141-2, ISO 14230-4 KWP2000, and CAN transparently, and Mode 01/03/09 decoding is identical at the application layer regardless of which one a vehicle actually uses. Widening coverage from 2008+ to 1996+ was a documentation/scope change, not a core code change.
 
@@ -96,6 +103,33 @@ Cypher-DDS never hardcodes a protocol — the ELM327's `ATSP0` auto-detect handl
 **Explicitly out of scope for now:** VAG, BMW, Mercedes (require UDS/ISO 14229 session handling — a different architecture), and anything pre-1996 (before the OBD-II mandate).
 
 See [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for a module-by-module implemented-vs-stubbed breakdown.
+
+## Bi-directional support
+
+Cypher-DDS now has a cross-make bi-directional framework, but support is intentionally staged.
+
+Implemented across all current makes:
+
+- action discovery through the session/profile layer
+- explicit confirmation for mutating actions
+- seed executable service actions:
+  - clear emissions DTCs
+  - tester present
+  - enter extended diagnostic session
+
+Declared but not yet executable across all current makes:
+
+- powertrain output control
+- body control coding
+- transmission adaptation reset
+- ABS bleed service
+- EPB service mode
+
+Explicitly blocked:
+
+- module programming / firmware flashing
+
+This split is deliberate. Generic OBD-II plus ELM327 is enough for the current diagnostic feature set and seed service actions. It is not enough to honestly claim full cross-OEM coding, active tests, or programming without make/ECU-specific implementations, transport upgrades, and safety controls.
 
 ## Getting started
 
@@ -165,12 +199,12 @@ Cypher-DDS/
 ├── cypher-dds.spec          # PyInstaller (Windows/desktop) packaging config
 ├── .github/workflows/       # CI: build-windows.yml, build-linux.yml, build-android.yml
 ├── src/cypher_dds/
-│   ├── core/                # brand-agnostic: serial (USB + Bluetooth), ELM327, PIDs, DTCs, VIN
+│   ├── core/                # brand-agnostic: serial (USB + Bluetooth), ELM327, PIDs, DTCs, VIN, actions
 │   ├── session.py           # framework-agnostic orchestration both UIs drive
 │   ├── theme.py             # shared brand accent colors (Royal Blue / Cherry Red)
-│   ├── profiles/            # brand plugins: GM, Ford, Dodge/Chrysler, Toyota/Lexus, Honda/Acura
+│   ├── profiles/            # brand plugins + ECU-family catalogs: GM, Ford, Dodge/Chrysler, Toyota/Lexus, Honda/Acura, Kia
 │   ├── tui/                 # Textual dashboard (desktop)
-│   └── mobile/               # Kivy app (Android)
+│   └── mobile/              # Kivy app (Android)
 └── tests/                   # decode-logic + session + UI tests — no hardware needed
 ```
 
@@ -195,15 +229,17 @@ class MyBrandProfile(VehicleProfile):
 register_profile(MyBrandProfile())
 ```
 
-Toyota/Lexus and Honda/Acura started as intentionally empty stubs, included specifically to prove this interface holds up before their tables got filled in — all five brands now carry real DTC data, validating that the plugin architecture scales without any core changes.
+Profiles can also expose bi-directional action catalogs and ECU-family metadata through the base interface. The current built-in set is GM, Ford, Dodge/Chrysler, Toyota/Lexus, Honda/Acura, and Kia.
 
 ## Roadmap
 
-Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md), including a full planned-features backlog for both UIs. Done: the whole core layer (USB + Bluetooth serial transport, ELM327 command framing, Mode 01/03/04/09 decode), DTC tables for all five brands (GM 402, Ford 410, Dodge/Chrysler 97, Toyota/Lexus 44, Honda/Acura 94 P1xxx codes), a small verified set of GM/Ford enhanced PIDs, a 353-entry `WMI_TABLE` from NHTSA's public vPIC database, the Textual dashboard wired end to end to real core state via the new `cypher_dds.session` layer, and CI-built Windows/Android packages. Next: a real Android Bluetooth backend, installing both packaged artifacts on actual hardware to verify them beyond CI, and enhanced PIDs/B/C/U codes across all five brands.
+Tracked in detail in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Done: the whole core read-oriented layer (USB + Bluetooth serial transport, ELM327 command framing, Mode 01/03/04/09 decode), DTC tables for GM/Ford/Dodge-Chrysler/Toyota-Lexus/Honda-Acura, Kia profile and VIN/WMI routing, a small verified set of GM/Ford enhanced PIDs, a NHTSA-derived `WMI_TABLE`, the Textual dashboard wired end to end to real core state via `cypher_dds.session`, and the first cross-make bi-directional action framework with ECU-family catalogs. Next: close the TUI verification gap, add the first real OEM-specific active-test/coding/service pack, build a stronger UDS/transport layer, add TUI action UX, and implement a real Android Bluetooth backend.
 
 ## Safety
 
 Reading data is inert. Clearing DTCs (Mode 04) resets your vehicle's readiness monitors, which can affect emissions testing until they recomplete a drive cycle — know what you're doing before you clear codes on a car you need inspected soon.
+
+Any future bi-directional functions that move actuators, reset adaptations, or alter coding are safety-sensitive by default. Cypher-DDS now enforces explicit confirmation for mutating actions at the session layer, and module programming remains deliberately blocked.
 
 ## License
 
