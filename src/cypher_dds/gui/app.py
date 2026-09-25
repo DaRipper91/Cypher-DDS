@@ -28,6 +28,22 @@ from cypher_dds.session import DEFAULT_LIVE_PIDS, DiagnosticSession
 from cypher_dds.theme import CHERRY_RED, ROYAL_BLUE
 
 
+def connection_field_states(mode: str) -> dict[str, str]:
+    if mode == "usb":
+        return {"port": "normal", "bluetooth": "disabled", "channel": "disabled"}
+    if mode == "bluetooth":
+        return {"port": "disabled", "bluetooth": "normal", "channel": "normal"}
+    return {"port": "disabled", "bluetooth": "disabled", "channel": "disabled"}
+
+
+def action_filter_summary(visible_count: int, total_count: int, category: str) -> str:
+    if total_count == 0:
+        return "Showing 0 actions"
+    if category == "all":
+        return f"Showing {visible_count} of {total_count} actions"
+    return f"Showing {visible_count} of {total_count} actions in {category}"
+
+
 class CypherDDSGUI(tk.Tk):
     """Root desktop GUI window."""
 
@@ -57,14 +73,18 @@ class CypherDDSGUI(tk.Tk):
         self._live_var = tk.StringVar(value=self._live_placeholder())
         self._selected_action_key = tk.StringVar(value="")
         self._action_category_filter = tk.StringVar(value="all")
+        self._action_filter_summary = tk.StringVar(value="Showing 0 actions")
         self._selected_action_description = tk.StringVar(value="Description: —")
         self._selected_action_support = tk.StringVar(value="Support: —")
         self._selected_action_danger = tk.StringVar(value="Danger: —")
 
         self._action_index: dict[str, DiagnosticAction] = {}
         self._visible_action_keys: list[str] = []
+        self._busy = False
 
         self._build_layout()
+        self._connect_mode.trace_add("write", self._on_connect_mode_changed)
+        self._update_connection_field_states()
 
     def _build_layout(self) -> None:
         root = ttk.Frame(self, padding=12)
@@ -89,19 +109,25 @@ class CypherDDSGUI(tk.Tk):
         ).grid(row=0, column=2, sticky="w")
 
         ttk.Label(connection, text="Port").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Entry(connection, textvariable=self._port_var).grid(
+        self._port_entry = ttk.Entry(connection, textvariable=self._port_var)
+        self._port_entry.grid(
             row=1, column=1, sticky="ew", padx=(4, 12), pady=(8, 0)
         )
         ttk.Label(connection, text="Bluetooth MAC").grid(row=1, column=2, sticky="w", pady=(8, 0))
-        ttk.Entry(connection, textvariable=self._bluetooth_var).grid(
+        self._bluetooth_entry = ttk.Entry(connection, textvariable=self._bluetooth_var)
+        self._bluetooth_entry.grid(
             row=1, column=3, sticky="ew", padx=(4, 12), pady=(8, 0)
         )
         ttk.Label(connection, text="RFCOMM").grid(row=1, column=4, sticky="w", pady=(8, 0))
-        ttk.Entry(connection, textvariable=self._bluetooth_channel_var, width=6).grid(
+        self._bluetooth_channel_entry = ttk.Entry(
+            connection, textvariable=self._bluetooth_channel_var, width=6
+        )
+        self._bluetooth_channel_entry.grid(
             row=1, column=5, sticky="w", padx=(4, 0), pady=(8, 0)
         )
 
-        ttk.Button(connection, text="Connect", command=self._start_connect).grid(
+        self._connect_button = ttk.Button(connection, text="Connect", command=self._start_connect)
+        self._connect_button.grid(
             row=0, column=5, sticky="e"
         )
         self._refresh_button = ttk.Button(
@@ -131,7 +157,10 @@ class CypherDDSGUI(tk.Tk):
         self._dtc_tree.heading("description", text="Description")
         self._dtc_tree.column("code", width=110, anchor="w")
         self._dtc_tree.column("description", width=560, anchor="w")
+        dtc_scroll = ttk.Scrollbar(diagnostics, orient="vertical", command=self._dtc_tree.yview)
+        self._dtc_tree.configure(yscrollcommand=dtc_scroll.set)
         self._dtc_tree.grid(row=1, column=0, sticky="ew", pady=(8, 8))
+        dtc_scroll.grid(row=1, column=1, sticky="ns", pady=(8, 8))
         ttk.Label(diagnostics, textvariable=self._live_var).grid(row=2, column=0, sticky="w", pady=(0, 8))
         self._clear_dtcs_button = ttk.Button(
             diagnostics, text="Clear DTCs", command=self._start_clear_dtcs, state="disabled"
@@ -160,28 +189,47 @@ class CypherDDSGUI(tk.Tk):
         )
         self._category_filter_combo.grid(row=0, column=2, sticky="e")
         self._category_filter_combo.bind("<<ComboboxSelected>>", self._on_action_filter_changed)
+        ttk.Label(actions, textvariable=self._action_filter_summary).grid(row=1, column=0, sticky="w")
         self._actions_listbox = tk.Listbox(actions, exportselection=False, height=14)
-        self._actions_listbox.grid(row=1, column=0, sticky="nsew", pady=(6, 8))
+        action_list_frame = ttk.Frame(actions)
+        action_list_frame.grid(row=2, column=0, sticky="nsew", pady=(6, 8))
+        action_list_frame.columnconfigure(0, weight=1)
+        action_list_frame.rowconfigure(0, weight=1)
+        self._actions_listbox.grid(in_=action_list_frame, row=0, column=0, sticky="nsew")
+        action_scroll = ttk.Scrollbar(
+            action_list_frame, orient="vertical", command=self._actions_listbox.yview
+        )
+        self._actions_listbox.configure(yscrollcommand=action_scroll.set)
+        action_scroll.grid(row=0, column=1, sticky="ns")
         self._actions_listbox.bind("<<ListboxSelect>>", self._on_action_selected)
         ttk.Label(actions, textvariable=self._selected_action_description, wraplength=320).grid(
-            row=2, column=0, sticky="w"
+            row=3, column=0, sticky="w"
         )
-        ttk.Label(actions, textvariable=self._selected_action_support).grid(row=3, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(actions, textvariable=self._selected_action_support).grid(row=4, column=0, sticky="w", pady=(6, 0))
         ttk.Label(actions, textvariable=self._selected_action_danger, wraplength=320).grid(
-            row=4, column=0, sticky="w", pady=(6, 6)
+            row=5, column=0, sticky="w", pady=(6, 6)
         )
         self._run_action_button = ttk.Button(
             actions, text="Run action", command=self._start_run_action, state="disabled"
         )
-        self._run_action_button.grid(row=5, column=0, sticky="e")
+        self._run_action_button.grid(row=6, column=0, sticky="e")
 
         logs = ttk.LabelFrame(main_panes, text="Logs", padding=10)
         logs.columnconfigure(0, weight=1)
-        logs.rowconfigure(0, weight=1)
+        logs.rowconfigure(1, weight=1)
         main_panes.add(logs, weight=2)
 
+        logs_header = ttk.Frame(logs)
+        logs_header.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        logs_header.columnconfigure(0, weight=1)
+        ttk.Label(logs_header, text="Event log").grid(row=0, column=0, sticky="w")
+        ttk.Button(logs_header, text="Clear log", command=self._clear_log).grid(row=0, column=1, sticky="e")
+
         self._log_text = tk.Text(logs, wrap="word", height=18, state="disabled")
-        self._log_text.grid(row=0, column=0, sticky="nsew")
+        self._log_text.grid(row=1, column=0, sticky="nsew")
+        log_scroll = ttk.Scrollbar(logs, orient="vertical", command=self._log_text.yview)
+        self._log_text.configure(yscrollcommand=log_scroll.set)
+        log_scroll.grid(row=1, column=1, sticky="ns")
 
     @staticmethod
     def _live_placeholder() -> str:
@@ -193,15 +241,75 @@ class CypherDDSGUI(tk.Tk):
         self._log_text.see("end")
         self._log_text.configure(state="disabled")
 
+    def _clear_log(self) -> None:
+        self._log_text.configure(state="normal")
+        self._log_text.delete("1.0", "end")
+        self._log_text.configure(state="disabled")
+
+    def _set_busy(self, busy: bool, *, connect_label: str | None = None) -> None:
+        self._busy = busy
+        self._connect_button.configure(
+            state="disabled" if busy else "normal",
+            text=connect_label if busy and connect_label else "Connect",
+        )
+        if busy:
+            self._refresh_button.configure(state="disabled")
+            self._clear_dtcs_button.configure(state="disabled")
+            self._run_action_button.configure(state="disabled")
+            self._category_filter_combo.configure(state="disabled")
+        else:
+            self._refresh_button.configure(state="normal" if self._session.connected else "disabled")
+            self._clear_dtcs_button.configure(state="normal" if self._session.connected else "disabled")
+            self._category_filter_combo.configure(
+                state="readonly" if self._action_index else "disabled"
+            )
+            action = self._selected_action()
+            self._run_action_button.configure(
+                state="normal" if action is not None and action.supported and action.commands else "disabled"
+            )
+        self._update_connection_field_states()
+
+    def _update_connection_field_states(self) -> None:
+        states = connection_field_states(self._connect_mode.get())
+        if self._busy:
+            states = {"port": "disabled", "bluetooth": "disabled", "channel": "disabled"}
+        self._port_entry.configure(state=states["port"])
+        self._bluetooth_entry.configure(state=states["bluetooth"])
+        self._bluetooth_channel_entry.configure(state=states["channel"])
+
+    def _on_connect_mode_changed(self, *_args) -> None:
+        self._update_connection_field_states()
+
+    def _validate_connection_inputs(self) -> str | None:
+        mode = self._connect_mode.get()
+        if mode == "usb" and not self._port_var.get().strip():
+            return "Enter a USB serial port before connecting."
+        if mode == "bluetooth":
+            if not self._bluetooth_var.get().strip():
+                return "Enter a Bluetooth MAC address before connecting."
+            try:
+                int(self._bluetooth_channel_var.get())
+            except ValueError:
+                return "RFCOMM channel must be a whole number."
+        return None
+
     def _start_connect(self) -> None:
+        if self._busy:
+            return
+        validation_error = self._validate_connection_inputs()
+        if validation_error:
+            self._on_connect_failed(validation_error)
+            return
+        self._set_busy(True, connect_label="Connecting…")
         threading.Thread(target=self._connect, daemon=True).start()
 
     def _start_refresh(self) -> None:
-        if self._session.connected:
+        if self._session.connected and not self._busy:
+            self._set_busy(True)
             threading.Thread(target=self._refresh, daemon=True).start()
 
     def _start_clear_dtcs(self) -> None:
-        if not self._session.connected:
+        if not self._session.connected or self._busy:
             return
         if not messagebox.askyesno(
             "Confirm DTC clear",
@@ -213,6 +321,8 @@ class CypherDDSGUI(tk.Tk):
         threading.Thread(target=self._clear_dtcs, daemon=True).start()
 
     def _start_run_action(self) -> None:
+        if self._busy:
+            return
         action = self._selected_action()
         if action is None:
             return
@@ -225,6 +335,7 @@ class CypherDDSGUI(tk.Tk):
                 self._append_log(f"Cancelled action: {action.title}")
                 return
 
+        self._set_busy(True)
         threading.Thread(target=self._run_action, args=(action,), daemon=True).start()
 
     def _selected_action(self) -> DiagnosticAction | None:
@@ -244,7 +355,7 @@ class CypherDDSGUI(tk.Tk):
             else:
                 protocol = self._session.connect(mock_scenario=self._mock_scenario)
         except Exception as exc:  # noqa: BLE001
-            self.after(0, self._on_connect_failed, str(exc))
+            self.after(0, self._finish_connect_failed, str(exc))
             return
 
         self.after(0, self._on_connected, protocol)
@@ -252,6 +363,7 @@ class CypherDDSGUI(tk.Tk):
         self.after(0, self._on_vin_resolved, vin_info)
         self._refresh()
         self.after(0, self._load_actions)
+        self.after(0, self._set_busy, False)
 
     def _refresh(self) -> None:
         dtcs: tuple[DTC, ...] = ()
@@ -265,14 +377,17 @@ class CypherDDSGUI(tk.Tk):
             values = self._session.read_live_data()
         except Exception as exc:  # noqa: BLE001
             self.after(0, self._append_log, f"PID read failed: {exc}")
+            self.after(0, self._set_busy, False)
             return
         self.after(0, self._on_pid_values, values)
+        self.after(0, self._set_busy, False)
 
     def _clear_dtcs(self) -> None:
         try:
             self._session.clear_dtcs()
         except Exception as exc:  # noqa: BLE001
             self.after(0, self._append_log, f"DTC clear failed: {exc}")
+            self.after(0, self._set_busy, False)
             return
 
         self.after(0, self._append_log, "DTC clear succeeded")
@@ -283,16 +398,22 @@ class CypherDDSGUI(tk.Tk):
             result = self._session.run_action(action.key, confirm_write=action.mutates_vehicle_state)
         except Exception as exc:  # noqa: BLE001
             self.after(0, self._append_log, f"Action failed: {action.title}: {exc}")
+            self.after(0, self._set_busy, False)
             return
 
         self.after(0, self._append_log, f"Action succeeded: {action.title}")
         for response in result.responses:
             self.after(0, self._append_log, f"  {response}")
+        self.after(0, self._set_busy, False)
 
     def _on_connect_failed(self, error: str) -> None:
         self._status_var.set(f"Connection failed: {error}")
         self._status_label.configure(fg=CHERRY_RED)
         self._append_log(f"Connection failed: {error}")
+
+    def _finish_connect_failed(self, error: str) -> None:
+        self._on_connect_failed(error)
+        self._set_busy(False)
 
     def _on_connected(self, protocol: str) -> None:
         self._status_var.set(f"● LIVE — {protocol}")
@@ -347,6 +468,11 @@ class CypherDDSGUI(tk.Tk):
                 continue
             self._actions_listbox.insert("end", action_display_label(action))
             self._visible_action_keys.append(key)
+        self._action_filter_summary.set(
+            action_filter_summary(
+                len(self._visible_action_keys), len(self._action_index), selected_category
+            )
+        )
 
         if self._visible_action_keys:
             first_key = self._visible_action_keys[0]
@@ -380,7 +506,7 @@ class CypherDDSGUI(tk.Tk):
         )
         self._selected_action_danger.set(f"Danger: {action.danger_note or '—'}")
         self._run_action_button.configure(
-            state="normal" if action.supported and action.commands else "disabled"
+            state="normal" if not self._busy and action.supported and action.commands else "disabled"
         )
 
 

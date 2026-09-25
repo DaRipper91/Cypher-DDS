@@ -1,5 +1,6 @@
 from cypher_dds.core.actions import ActionCategory, DiagnosticAction, SupportLevel
 from cypher_dds.core.dtc import DTC
+from cypher_dds.gui.app import action_filter_summary, connection_field_states
 from cypher_dds.ui_format import (
     action_category_labels,
     action_display_label,
@@ -66,3 +67,27 @@ def test_action_category_labels_returns_all_plus_sorted_categories():
     )
 
     assert action_category_labels(actions) == ("all", "coding", "service")
+
+
+def test_connection_field_states_match_selected_mode():
+    assert connection_field_states("mock") == {
+        "port": "disabled",
+        "bluetooth": "disabled",
+        "channel": "disabled",
+    }
+    assert connection_field_states("usb") == {
+        "port": "normal",
+        "bluetooth": "disabled",
+        "channel": "disabled",
+    }
+    assert connection_field_states("bluetooth") == {
+        "port": "disabled",
+        "bluetooth": "normal",
+        "channel": "normal",
+    }
+
+
+def test_action_filter_summary_reports_counts_and_category():
+    assert action_filter_summary(0, 0, "all") == "Showing 0 actions"
+    assert action_filter_summary(3, 9, "all") == "Showing 3 of 9 actions"
+    assert action_filter_summary(2, 9, "service") == "Showing 2 of 9 actions in service"

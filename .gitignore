@@ -16,3 +16,11 @@ dist/
 bin/
 *.apk
 *.exe
+
+# Per-agent local config, drafts, archives
+.claude/
+.codex/
+.gemini/
+drafts/
+*.zip
+*.egg-info/

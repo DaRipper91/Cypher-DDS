@@ -122,3 +122,22 @@ This tracker only becomes real product work if the transport/action stack undern
 - GM has the cleaner current path for standard-bus-visible enhanced actions in this repo
 - Ford body functions are often constrained by the documented MS-CAN limitation in the current architecture
 - Avoid late-model Stellantis first because gateway/security restrictions are likely to dominate early effort
+
+## GM research snapshot
+
+Current best GM candidate: **Chevrolet Silverado 1500 T1XX (2019+)**.
+
+Why this is the best first GM slice right now:
+
+- Chevrolet's official Stop/Start support guidance says the feature can be turned off only for the current ignition cycle, which confirms the default behavior Cypher-DDS would need to override
+- Public aftermarket support exists for a persistent preference-restoring hardware workaround on:
+  - Silverado 1500 `2019-2026`
+  - Sierra 1500 `2019-2026`
+  - Tahoe / Suburban / Yukon `2021-2026`
+  - Colorado / Canyon `2023-2026`
+- That confirms real-world platform demand and stable switch-level support, but it does **not** yet confirm the underlying BCM/ECU parameter, security-access path, or write identifier needed for a true Cypher-DDS ECU coding implementation
+
+Practical implication:
+
+- The repo should treat GM as the first platform family for research-to-implementation work
+- The first executable Cypher-DDS slice should be one **specific** GM vehicle group, most likely Silverado 1500 T1XX, after the actual ECU write path is validated from a documented source

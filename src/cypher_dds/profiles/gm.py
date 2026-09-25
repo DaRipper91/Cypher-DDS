@@ -460,18 +460,210 @@ ENHANCED_PIDS: tuple[EnhancedPID, ...] = (
 )
 
 CODING_FUNCTIONS: tuple[VehicleCodingFunction, ...] = (
-    VehicleCodingFunction("gm.silverado_1500_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Silverado 1500", "T1XX", "2019+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.equinox_d2xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Equinox", "D2XX", "2018-2024", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.equinox_d2xx_2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Equinox", "D2XX-2", "2025+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.tahoe_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Tahoe", "T1XX", "2021+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.suburban_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Suburban", "T1XX", "2021+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.traverse_c1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Traverse", "C1XX", "2018-2023", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.traverse_c1xx_2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Traverse", "C1XX-2", "2024+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.colorado_31xx_2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Colorado", "31XX-2", "2023+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.trax_unknown.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "Chevrolet", "Trax", "-", "-", "disable_auto_stop_start_persistent", powertrain_notes="ASS configuration requires further validation", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.sierra_1500_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "GMC", "Sierra 1500", "T1XX", "2019+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.yukon_t1xx.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "GMC", "Yukon", "T1XX", "2021+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
-    VehicleCodingFunction("gm.canyon_31xx_2.disable_auto_stop_start_persistent", "Disable auto stop-start (persistent)", "gm", "GMC", "Canyon", "31XX-2", "2023+", "disable_auto_stop_start_persistent", target_ecu_family="gm_bcm", status=CodingFunctionStatus.RESEARCH),
+    VehicleCodingFunction(
+        "gm.silverado_1500_t1xx.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Silverado 1500",
+        "T1XX",
+        "2019+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Official Chevrolet guidance says Stop/Start can be disabled only for the active key cycle. "
+            "Public aftermarket support exists for a switch-inline memory device on 2019-2026 Silverado 1500, "
+            "which confirms platform demand and switch-level compatibility, but no verified ECU parameter-write "
+            "procedure is encoded here yet."
+        ),
+        verification_source=(
+            "Chevrolet Stop/Start support page plus Autostop Eliminator 2019-2026 Silverado 1500 compatibility"
+        ),
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.equinox_d2xx.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Equinox",
+        "D2XX",
+        "2018-2024",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Public GM-specific switch-memory hardware was located for 2023-2024 Equinox, not yet for the full "
+            "2018-2024 span in this manifest. ECU write path remains unverified."
+        ),
+        verification_source="Autostop Eliminator GM collection shows 2023-2024 Equinox support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.equinox_d2xx_2.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Equinox",
+        "D2XX-2",
+        "2025+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Public GM-specific switch-memory hardware was located for 2025-2026 Equinox, but not a validated ECU "
+            "coding/write procedure."
+        ),
+        verification_source="Autostop Eliminator GM collection shows 2025-2026 Equinox support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.tahoe_t1xx.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Tahoe",
+        "T1XX",
+        "2021+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Official Chevrolet guidance says Stop/Start resets at each start. Public switch-inline memory hardware "
+            "exists for 2021-2026 Tahoe, but a BCM/ECU write procedure has not been verified."
+        ),
+        verification_source="Chevrolet Stop/Start support page plus Autostop Eliminator 2021-2026 Tahoe support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.suburban_t1xx.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Suburban",
+        "T1XX",
+        "2021+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Public switch-inline memory hardware exists for 2021-2026 Suburban, but no verified BCM/ECU parameter "
+            "write procedure is tracked yet."
+        ),
+        verification_source="Autostop Eliminator GM collection shows 2021-2026 Suburban support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.traverse_c1xx.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Traverse",
+        "C1XX",
+        "2018-2023",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "No GM-specific public persistent-disable source was verified here for 2018-2023 Traverse. Later "
+            "2024+ support exists via switch-memory hardware, but not for this earlier span."
+        ),
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.traverse_c1xx_2.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Traverse",
+        "C1XX-2",
+        "2024+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Public switch-memory hardware exists for 2024-2026 Traverse, but no validated ECU coding/write path "
+            "has been confirmed."
+        ),
+        verification_source="Autostop Eliminator GM collection shows 2024-2026 Traverse support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.colorado_31xx_2.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Colorado",
+        "31XX-2",
+        "2023+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Public switch-memory hardware exists for 2023-2026 Colorado, but a validated ECU parameter-write "
+            "procedure is still missing."
+        ),
+        verification_source="Autostop Eliminator GM collection shows 2023-2026 Colorado support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.trax_unknown.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "Chevrolet",
+        "Trax",
+        "-",
+        "-",
+        "disable_auto_stop_start_persistent",
+        powertrain_notes="ASS configuration requires further validation",
+        target_ecu_family="gm_bcm",
+        procedure_summary="No GM-specific public persistent-disable source was verified here for Trax.",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.sierra_1500_t1xx.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "GMC",
+        "Sierra 1500",
+        "T1XX",
+        "2019+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Public switch-inline memory hardware exists for 2019-2026 Sierra 1500, confirming platform coverage, "
+            "but no validated ECU coding/write path is confirmed."
+        ),
+        verification_source="Autostop Eliminator GM collection shows 2019-2026 Sierra 1500 support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.yukon_t1xx.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "GMC",
+        "Yukon",
+        "T1XX",
+        "2021+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Public switch-inline memory hardware exists for 2021-2026 Yukon/Yukon XL, but no verified ECU "
+            "parameter-write procedure is tracked yet."
+        ),
+        verification_source="Autostop Eliminator 2021-2026 Yukon/Yukon XL support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
+    VehicleCodingFunction(
+        "gm.canyon_31xx_2.disable_auto_stop_start_persistent",
+        "Disable auto stop-start (persistent)",
+        "gm",
+        "GMC",
+        "Canyon",
+        "31XX-2",
+        "2023+",
+        "disable_auto_stop_start_persistent",
+        target_ecu_family="gm_bcm",
+        procedure_summary=(
+            "Public switch-memory hardware exists for 2023-2026 Canyon, but a validated ECU parameter-write "
+            "procedure is still missing."
+        ),
+        verification_source="Autostop Eliminator GM collection shows 2023-2026 Canyon support",
+        status=CodingFunctionStatus.RESEARCH,
+    ),
 )
 
 

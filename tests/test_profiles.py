@@ -95,3 +95,10 @@ def test_vehicle_tied_coding_functions_are_seeded_for_target_profiles():
     assert all(function.status == CodingFunctionStatus.RESEARCH for function in ford_functions)
     assert all(function.target_function == "disable_auto_stop_start_persistent" for function in gm_functions)
     assert any(function.brand == "Jeep" for function in mopar_functions)
+    silverado = next(
+        function
+        for function in gm_functions
+        if function.key == "gm.silverado_1500_t1xx.disable_auto_stop_start_persistent"
+    )
+    assert "active key cycle" in silverado.procedure_summary
+    assert silverado.verification_source is not None
